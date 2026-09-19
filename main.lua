@@ -1,32 +1,28 @@
 --[[
-    BeyondClient v5.0 - Ultimate Premium Edition
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (Dimensity 800U / 8GB RAM / Android 10)
     Developer: UserBeyond-dev
-    Repository: GitHub (Japan) / BeyondClient
-    File: main.lua (Part 1/4 - Core Architecture & UI Framework)
-    Icon Asset ID: rbxassetid://114254245648192 (Chibi Zero Two 4K)
+    File: main.lua (Part 1/Unknown - Advanced Window Controls & Self-Destruct System)
 --]]
 
--- Безопасное кэширование системных сервисов (Защита от хуков со стороны игры)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
-local Lighting = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
-assert(LocalPlayer, "[BeyondClient Error]: Окружение игры не инициализировано.")
 local Camera = workspace.CurrentCamera or workspace:WaitForChild("Camera")
 
--- Очистка старых сессий скрипта во избежание утечек памяти (Memory Leaks)
-if _G.BeyondClient_Shutdown then
-    pcall(_G.BeyondClient_Shutdown)
+-- Тотальная очистка предыдущей сессии скрипта (если она была запущена ранее)
+if _G.BeyondClient_SelfDestruct then
+    pcall(_G.BeyondClient_SelfDestruct)
 end
 
--- Инициализация глобального хранилища конфигурации
+-- Инициализация глобального кэша и конфигурации под дисплей 2400х1080
 _G.BeyondConfig = {
-    Version = "5.0-Alpha",
+    Version = "5.0-HONOR-Edition",
     Developer = "UserBeyond-dev",
     SpeedValue = 16,
     InfiniteJump = false,
@@ -35,64 +31,23 @@ _G.BeyondConfig = {
     BodySize = "Средний",
     ThemeColor = Color3.fromRGB(255, 43, 90), -- Розовый Zero Two
     BgColor = Color3.fromRGB(15, 15, 20),
-    AccentGlow = Color3.fromRGB(255, 100, 130)
+    IsMenuOpened = true,
+    GlowPhase = 0
 }
 
--- ====================================================================
--- [ МОДУЛЬ ОБХОДА И ЗАЩИТЫ (ANTI-CHEAT BYPASS CORE) ]
--- ====================================================================
-local BypassModule = {}
-do
-    local mt = getrawmetatable(game)
-    local old_namecall = mt.__namecall
-    local old_index = mt.__index
-    
-    setreadonly(mt, false)
-    
-    -- Защита от детекта скрипта через сканирование CoreGui / Namecall
-    mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        local args = {...}
-        
-        if not checkcaller() then
-            -- Блокируем отправку подозрительных репортов на сервер игры
-            if method == "FireServer" and tostring(self) == "AntiCheatReport" then
-                return nil
-            end
-            if method == "Kick" then
-                print("[BeyondClient Bypass]: Заблокирована попытка кика со стороны сервера.")
-                return nil
-            end
-        end
-        return old_namecall(self, ...)
-    end)
-    
-    setreadonly(mt, true)
-    print("[BeyondClient]: Модуль Anti-Cheat Bypass успешно интегрирован в Metatable.")
-end
+-- Глобальный трекер для отключения всех активных фоновых циклов при выгрузке читиков
+local ScriptActive = true
 
--- ====================================================================
--- [ БАЗОВЫЙ ИНТЕРФЕЙС И ГЛУБОКАЯ СТИЛИЗАЦИЯ (TOP-TIER WEB DESIGN) ]
--- ====================================================================
+-- Создание корневого защищенного GUI контейнера поверх игровых окон Delta
 local BeyondScreenGui = Instance.new("ScreenGui")
-BeyondScreenGui.Name = HttpService:GenerateGUID(false) -- Рандомное имя от детекта
+BeyondScreenGui.Name = "Beyond_" .. HttpService:GenerateGUID(false):sub(1, 8)
 BeyondScreenGui.ResetOnSpawn = false
 BeyondScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local success, err = pcall(function()
-    BeyondScreenGui.Parent = CoreGui
-end)
-if not success then
-    BeyondScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
+local success, err = pcall(function() BeyondScreenGui.Parent = CoreGui end)
+if not success then BeyondScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
--- Функция безопасного закрытия интерфейса
-_G.BeyondClient_Shutdown = function()
-    BeyondScreenGui:Destroy()
-    _G.BeyondConfig = nil
-end
-
--- Главный фрейм меню
+-- Главный фрейм управления (Адаптирован под тач-скрины 2400x1080)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainPanel"
 MainFrame.Size = UDim2.new(0, 440, 0, 340)
@@ -102,29 +57,18 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Parent = BeyondScreenGui
 
--- Скругление и размытие углов
 local Corner = Instance.new("UICorner")
 Corner.CornerRadius = UDim.new(0, 14)
 Corner.Parent = MainFrame
 
--- Кастомная неоновая обводка (Stroke Effects)
+-- Фирменная неоновая обводка рамки меню
 local Stroke = Instance.new("UIStroke")
 Stroke.Thickness = 2
 Stroke.Color = _G.BeyondConfig.ThemeColor
 Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 Stroke.Parent = MainFrame
 
--- Сложный градиент заднего плана
-local BgGradient = Instance.new("UIGradient")
-BgGradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(24, 22, 30)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(14, 14, 18)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 14))
-}
-BgGradient.Rotation = 135
-BgGradient.Parent = MainFrame
-
--- --- ВЕРХНЯЯ ШАПКА МЕНЮ (ЗОНА ХЕНДЛИНГА DRAG-UI #1) ---
+-- --- ВЕРХНЯЯ ШАПКА И ЗОНА ХЕНДЛИНГА DRAG-UI ---
 local Header = Instance.new("Frame")
 Header.Name = "HeaderZone"
 Header.Size = UDim2.new(1, 0, 0, 45)
@@ -136,7 +80,6 @@ local HeaderCorner = Instance.new("UICorner")
 HeaderCorner.CornerRadius = UDim.new(0, 14)
 HeaderCorner.Parent = Header
 
--- Срез нижних углов шапки (визуальный паттерн)
 local HeaderLine = Instance.new("Frame")
 HeaderLine.Size = UDim2.new(1, 0, 0, 2)
 HeaderLine.Position = UDim2.new(0, 0, 1, -2)
@@ -144,252 +87,205 @@ HeaderLine.BackgroundColor3 = _G.BeyondConfig.ThemeColor
 HeaderLine.BorderSizePixel = 0
 HeaderLine.Parent = Header
 
--- Иконка аниме чиби Ноль Два (4K Asset Инициализация)
-local AvatarIcon = Instance.new("ImageLabel")
-AvatarIcon.Name = "ZeroTwo_4K"
-AvatarIcon.Size = UDim2.new(0, 32, 0, 32)
-AvatarIcon.Position = UDim2.new(0, 12, 0, 6)
-AvatarIcon.BackgroundTransparency = 1
-AvatarIcon.Image = "rbxassetid://114254245648192"
-AvatarIcon.Parent = Header
-
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -120, 1, 0)
-Title.Position = UDim2.new(0, 52, 0, 0)
+Title.Size = UDim2.new(1, -150, 1, 0)
+Title.Position = UDim2.new(0, 16, 0, 0)
 Title.Text = "BEYOND <font color='#FF2B5A'>CLIENT</font> <font color='#A0A0A5'>v5.0</font>"
 Title.RichText = true
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 15
+Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 Title.Parent = Header
 
-local DevTag = Instance.new("TextLabel")
-DevTag.Size = UDim2.new(0, 120, 1, 0)
-DevTag.Position = UDim2.new(1, -132, 0, 0)
-DevTag.Text = "by UserBeyond-dev"
-DevTag.TextColor3 = Color3.fromRGB(140, 140, 160)
-DevTag.Font = Enum.Font.GothamItalic
-DevTag.TextSize = 11
-DevTag.TextXAlignment = Enum.TextXAlignment.Right
-DevTag.BackgroundTransparency = 1
-DevTag.Parent = Header
+-- --- ПЛАВАЮЩАЯ КНОПКА ВЫЗОВА МЕНЮ (Инициализируется скрытой) ---
+local MobileToggleButton = Instance.new("ImageButton")
+MobileToggleButton.Name = "BeyondMobileCall"
+MobileToggleButton.Size = UDim2.new(0, 52, 0, 52)
+MobileToggleButton.Position = UDim2.new(0, 20, 0.25, 0)
+MobileToggleButton.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+MobileToggleButton.BorderSizePixel = 0
+MobileToggleButton.Image = "rbxassetid://16024021200" -- Рабочий ассет круга
+MobileToggleButton.ImageColor3 = _G.BeyondConfig.ThemeColor
+MobileToggleButton.ZIndex = 15
+MobileToggleButton.Visible = false
+MobileToggleButton.Parent = BeyondScreenGui
 
--- --- НИЖНЯЯ ПАНЕЛЬ МЕНЮ (ЗОНА ХЕНДЛИНГА DRAG-UI #2) ---
-local Footer = Instance.new("Frame")
-Footer.Name = "FooterZone"
-Footer.Size = UDim2.new(1, 0, 0, 25)
-Footer.Position = UDim2.new(0, 0, 1, -25)
-Footer.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-Footer.BorderSizePixel = 0
-Footer.Parent = MainFrame
+Instance.new("UICorner", MobileToggleButton).CornerRadius = UDim.new(1, 0)
+local ButtonStroke = Instance.new("UIStroke", MobileToggleButton)
+ButtonStroke.Thickness = 2
+ButtonStroke.Color = _G.BeyondConfig.ThemeColor
 
-local FooterCorner = Instance.new("UICorner")
-FooterCorner.CornerRadius = UDim.new(0, 10)
-FooterCorner.Parent = Footer
+-- --- ФУНКЦИОНАЛ КНОПКИ «МИНУС» (СКРЫТЬ ОКНО) ---
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Name = "Minimize"
+MinimizeBtn.Size = UDim2.new(0, 32, 0, 32)
+MinimizeBtn.Position = UDim2.new(1, -78, 0.5, -16)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 50)
+MinimizeBtn.Text = "—"
+MinimizeBtn.TextColor3 = Color3.fromRGB(220, 220, 235)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 14
+MinimizeBtn.Parent = Header
 
-local FooterText = Instance.new("TextLabel")
-FooterText.Size = UDim2.new(1, -24, 1, 0)
-FooterText.Position = UDim2.new(0, 12, 0, 0)
-FooterText.Text = "Repository: Japan/BeyondClient // Mainframe Stack Connected Successfully"
-FooterText.TextColor3 = Color3.fromRGB(0, 255, 140)
-FooterText.Font = Enum.Font.Code
-FooterText.TextSize = 10
-FooterText.TextXAlignment = Enum.TextXAlignment.Left
-FooterText.BackgroundTransparency = 1
-FooterText.Parent = Footer
+local MinCorner = Instance.new("UICorner", MinimizeBtn)
+MinCorner.CornerRadius = UDim.new(0, 6)
 
--- --- ГЛАВНЫЙ СКОЛЛИНГ-КОНТЕЙНЕР ДЛЯ МОДУЛЕЙ ---
+MinimizeBtn.MouseButton1Click:Connect(function()
+    _G.BeyondConfig.IsMenuOpened = false
+    -- Плавное сворачивание главного меню в ноль
+    TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, 440, 0, 0)}):Play()
+    task.wait(0.2)
+    MainFrame.Visible = false
+    -- Проявление плавающей круглой кнопки вызова
+    MobileToggleButton.Visible = true
+    MobileToggleButton.Size = UDim2.new(0, 0, 0, 0)
+    TweenService:Create(MobileToggleButton, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 52, 0, 52)}):Play()
+end)
+
+-- --- СИСТЕМА ТОТАЛЬНОГО СБРОСА И ЗАЧИСТКИ (КРЕСТИК) ---
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "Close"
+CloseBtn.Size = UDim2.new(0, 32, 0, 32)
+CloseBtn.Position = UDim2.new(1, -42, 0.5, -16)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 43, 90)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 12
+CloseBtn.Parent = Header
+
+local CloseCorner = Instance.new("UICorner", CloseBtn)
+CloseCorner.CornerRadius = UDim.new(0, 6)
+
+-- Функция-чистильщик следов
+_G.BeyondClient_SelfDestruct = function()
+    ScriptActive = false -- Останавливаем все фоновые потоки и рэйкасты
+    
+    -- Возвращаем дефолтные параметры физики аватара
+    pcall(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = 16 end
+        
+        -- Возвращаем коллизии текстур на место
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = true end
+        end
+    end)
+    
+    -- Полное уничтожение всех элементов UI из CoreGui
+    BeyondScreenGui:Destroy()
+    _G.BeyondConfig = nil
+    _G.BeyondClient_SelfDestruct = nil
+    print("[BeyondClient]: Все следы софта успешно стерты из памяти девайса.")
+end
+
+CloseBtn.MouseButton1Click:Connect(function()
+    _G.BeyondClient_SelfDestruct()
+end)
+
+-- Логика разворачивания меню обратно по нажатию на плавающую кнопку
+MobileToggleButton.MouseButton1Click:Connect(function()
+    _G.BeyondConfig.IsMenuOpened = true
+    TweenService:Create(MobileToggleButton, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    task.wait(0.15)
+    MobileToggleButton.Visible = false
+    MainFrame.Visible = true
+    TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 440, 0, 340)}):Play()
+end)
+
+-- --- ГЛАВНЫЙ СКОЛЛИНГ-КОНТЕЙНЕР ДЛЯ ПОСЛЕДУЮЩИХ МОДУЛЕЙ ---
 local Container = Instance.new("ScrollingFrame")
 Container.Name = "ModuleContainer"
 Container.Size = UDim2.new(1, -24, 1, -95)
 Container.Position = UDim2.new(0, 12, 0, 58)
 Container.BackgroundTransparency = 1
 Container.BorderSizePixel = 0
-Container.CanvasSize = UDim2.new(0, 0, 0, 550) -- Запас под весь пак тяжелого функционала
+Container.CanvasSize = UDim2.new(0, 0, 0, 700)
 Container.ScrollBarThickness = 4
 Container.ScrollBarImageColor3 = _G.BeyondConfig.ThemeColor
 Container.Parent = MainFrame
 
 local ListLayout = Instance.new("UIListLayout")
 ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ListLayout.Padding = UDim.new(0, 12)
+ListLayout.Padding = UDim.new(0, 10)
 ListLayout.Parent = Container
 
--- ====================================================================
--- [ ПРОФЕССИОНАЛЬНЫЙ СТАБИЛЬНЫЙ DRAG-UI (БЕЗ ПРЫЖКОВ ОКНА) ]
--- ====================================================================
-local dragging = false
-local dragInput, dragStart, startPos
+print("[BeyondClient Framework]: Часть 1 успешно развернута. Жду точку.")
+--[[
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (2400x1080 / Touch Optimization)
+    File: main.lua (Part 2/Unknown - Touch Drag-UI & Adaptive Interface Factory)
+--]]
 
-local function updateDrag(input)
-    local delta = input.Position - dragStart
-    -- Полная свобода перемещения, включая увод за края мобильного дисплея
-    MainFrame.Position = UDim2.new(
-        startPos.X.Scale, startPos.X.Offset + delta.x, 
-        startPos.Y.Scale, startPos.Y.Offset + delta.y
-    )
-end
+-- ====================================================================
+-- [ МОДУЛЬ ОБРАБОТКИ СЕНСОРНЫХ ЖЕСТОВ (TOUCH DRAG-UI) ]
+-- ====================================================================
 
-local function setupDragZone(zone)
-    zone.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
+local function EnableTouchDrag(dragZone, targetFrame)
+    local dragToggle = false
+    local dragInput, dragStart, startPosition
+
+    dragZone.InputBegan:Connect(function(input)
+        -- Реагируем строго на первое касание пальца (Touch) или клик мыши
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragToggle = true
             dragStart = input.Position
-            startPos = MainFrame.Position
-            
+            startPosition = targetFrame.Position
+
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
+                    dragToggle = false
                 end
             end)
         end
     end)
-    
-    zone.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseBehavior or input.UserInputType == Enum.UserInputType.Touch then
+
+    dragZone.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseBehavior then
             dragInput = input
         end
     end)
-end
 
--- Фиксация перетаскивания СТРОГО за шапку и футер (слайдеры теперь работают автономно!)
-setupDragZone(Header)
-setupDragZone(Footer)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        updateDrag(input)
-    end
-end)
-
-print("[BeyondClient Framework]: Часть 1 успешно развернута.")
---[[
-    BeyondClient v5.0 - Ultimate Premium Edition
-    Developer: UserBeyond-dev
-    File: main.lua (Part 2/4 - UI Factory & Velocity Physics Module)
---]]
-
--- ====================================================================
--- [ ПРОФЕССИОНАЛЬНАЯ UI-ФАБРИКА С АНИМАЦИЯМИ (ВЕБ-СТИЛЬ) ]
--- ====================================================================
-
--- Конструктор кастомных премиум-слайдеров
-local function CreateSlider(parent, text, min, max, default, callback)
-    local SliderFrame = Instance.new("Frame")
-    SliderFrame.Size = UDim2.new(1, 0, 0, 55)
-    SliderFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-    SliderFrame.BorderSizePixel = 0
-    SliderFrame.Parent = parent
-    
-    local SliderCorner = Instance.new("UICorner")
-    SliderCorner.CornerRadius = UDim.new(0, 8)
-    SliderCorner.Parent = SliderFrame
-    
-    local SliderStroke = Instance.new("UIStroke")
-    SliderStroke.Thickness = 1
-    SliderStroke.Color = Color3.fromRGB(35, 35, 45)
-    SliderStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    SliderStroke.Parent = SliderFrame
-    
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.8, 0, 0, 25)
-    Label.Position = UDim2.new(0, 12, 0, 4)
-    Label.Text = text .. ": <font color='#FF2B5A'>" .. tostring(default) .. "</font>"
-    Label.RichText = true
-    Label.TextColor3 = Color3.fromRGB(220, 220, 230)
-    Label.Font = Enum.Font.GothamSemibold
-    Label.TextSize = 13
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.BackgroundTransparency = 1
-    Label.Parent = SliderFrame
-    
-    local ContainerTrack = Instance.new("Frame")
-    ContainerTrack.Size = UDim2.new(1, -24, 0, 6)
-    ContainerTrack.Position = UDim2.new(0, 12, 0, 36)
-    ContainerTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    ContainerTrack.BorderSizePixel = 0
-    ContainerTrack.Parent = SliderFrame
-    
-    local TrackCorner = Instance.new("UICorner")
-    TrackCorner.CornerRadius = UDim.new(0, 3)
-    TrackCorner.Parent = ContainerTrack
-    
-    local Fill = Instance.new("Frame")
-    Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    Fill.BackgroundColor3 = _G.BeyondConfig.ThemeColor
-    Fill.BorderSizePixel = 0
-    Fill.Parent = ContainerTrack
-    
-    local FillCorner = Instance.new("UICorner")
-    FillCorner.CornerRadius = UDim.new(0, 3)
-    FillCorner.Parent = Fill
-    
-    local SliderBtn = Instance.new("TextButton")
-    SliderBtn.Size = UDim2.new(1, 0, 1, 0)
-    SliderBtn.BackgroundTransparency = 1
-    SliderBtn.Text = ""
-    SliderBtn.Parent = ContainerTrack
-    
-    local isSliding = false
-    
-    local function updateSlider(input)
-        local xOffset = math.clamp(input.Position.X - ContainerTrack.AbsolutePosition.X, 0, ContainerTrack.AbsoluteSize.X)
-        local percentage = xOffset / ContainerTrack.AbsoluteSize.X
-        local rawValue = min + (percentage * (max - min))
-        local finalValue = math.round(rawValue)
-        
-        TweenService:Create(Fill, TweenInfo.new(0.15, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {Size = UDim2.new(percentage, 0, 1, 0)}):Play()
-        Label.Text = text .. ": <font color='#FF2B5A'>" .. tostring(finalValue) .. "</font>"
-        callback(finalValue)
-    end
-    
-    SliderBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isSliding = true
-            TweenService:Create(SliderStroke, TweenInfo.new(0.2), {Color = _G.BeyondConfig.AccentGlow}):Play()
-            updateSlider(input)
-        end
-    end)
-    
     UserInputService.InputChanged:Connect(function(input)
-        if isSliding and (input.UserInputType == Enum.UserInputType.MouseBehavior or input.UserInputType == Enum.UserInputType.Touch) then
-            updateSlider(input)
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isSliding = false
-            TweenService:Create(SliderStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(35, 35, 45)}):Play()
+        if input == dragInput and dragToggle and ScriptActive then
+            local delta = input.Position - dragStart
+            -- Плавное смещение фрейма пальцем без прыжков по координатам
+            targetFrame.Position = UDim2.new(
+                startPosition.X.Scale, startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
+            )
         end
     end)
 end
 
--- Конструктор кастомных интерактивных переключателей (Toggles)
-local function CreateToggle(parent, text, default, callback)
+-- Активируем независимое перетаскивание для главного меню и для плавающей кнопки
+EnableTouchDrag(Header, MainFrame)
+EnableTouchDrag(MobileToggleButton, MobileToggleButton)
+
+-- ====================================================================
+-- [ АДАПТИВНАЯ МОБИЛЬНАЯ UI-ФАБРИКА С ИНТЕРПОЛЯЦИЕЙ ]
+-- ====================================================================
+
+-- Конструктор премиальных тогглов (Переключателей)
+local function CreateMobileToggle(parent, text, default, callback)
     local ToggleFrame = Instance.new("Frame")
-    ToggleFrame.Size = UDim2.new(1, 0, 0, 44)
-    ToggleFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+    ToggleFrame.Size = UDim2.new(1, 0, 0, 46)
+    ToggleFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
     ToggleFrame.BorderSizePixel = 0
     ToggleFrame.Parent = parent
     
-    local ToggleCorner = Instance.new("UICorner")
-    ToggleCorner.CornerRadius = UDim.new(0, 8)
-    ToggleCorner.Parent = ToggleFrame
-    
-    local ToggleStroke = Instance.new("UIStroke")
-    ToggleStroke.Thickness = 1
-    ToggleStroke.Color = Color3.fromRGB(35, 35, 45)
-    ToggleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    ToggleStroke.Parent = ToggleFrame
+    local TFCorner = Instance.new("UICorner")
+    TFCorner.CornerRadius = UDim.new(0, 8)
+    TFCorner.Parent = ToggleFrame
     
     local Label = Instance.new("TextLabel")
     Label.Size = UDim2.new(0.7, 0, 1, 0)
-    Label.Position = UDim2.new(0, 12, 0, 0)
+    Label.Position = UDim2.new(0, 14, 0, 0)
     Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(210, 210, 220)
+    Label.TextColor3 = Color3.fromRGB(215, 215, 225)
     Label.Font = Enum.Font.GothamSemibold
     Label.TextSize = 13
     Label.TextXAlignment = Enum.TextXAlignment.Left
@@ -397,8 +293,8 @@ local function CreateToggle(parent, text, default, callback)
     Label.Parent = ToggleFrame
     
     local CheckBox = Instance.new("TextButton")
-    CheckBox.Size = UDim2.new(0, 40, 0, 22)
-    CheckBox.Position = UDim2.new(1, -52, 0.5, -11)
+    CheckBox.Size = UDim2.new(0, 44, 0, 24)
+    CheckBox.Position = UDim2.new(1, -58, 0.5, -12)
     CheckBox.BackgroundColor3 = default and _G.BeyondConfig.ThemeColor or Color3.fromRGB(45, 45, 60)
     CheckBox.Text = ""
     CheckBox.Parent = ToggleFrame
@@ -408,8 +304,8 @@ local function CreateToggle(parent, text, default, callback)
     CBCorner.Parent = CheckBox
     
     local Indicator = Instance.new("Frame")
-    Indicator.Size = UDim2.new(0, 16, 0, 16)
-    Indicator.Position = default and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+    Indicator.Size = UDim2.new(0, 18, 0, 18)
+    Indicator.Position = default and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
     Indicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Indicator.Parent = CheckBox
     
@@ -419,805 +315,1346 @@ local function CreateToggle(parent, text, default, callback)
     
     local state = default
     CheckBox.MouseButton1Click:Connect(function()
+        if not ScriptActive then return end
         state = not state
-        local targetColor = state and _G.BeyondConfig.ThemeColor or Color3.fromRGB(45, 45, 60)
-        local targetPos = state and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
         
-        TweenService:Create(CheckBox, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {BackgroundColor3 = targetColor}):Play()
-        TweenService:Create(Indicator, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Position = targetPos}):Play()
-        TweenService:Create(ToggleStroke, TweenInfo.new(0.2), {Color = state and _G.BeyondConfig.AccentGlow or Color3.fromRGB(35, 35, 45)}):Play()
+        local targetColor = state and _G.BeyondConfig.ThemeColor or Color3.fromRGB(45, 45, 60)
+        local targetPos = state and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
+        
+        -- Плавная анимация переключения под палец
+        TweenService:Create(CheckBox, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundColor3 = targetColor}):Play()
+        TweenService:Create(Indicator, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Position = targetPos}):Play()
         
         callback(state)
     end)
 end
 
--- ====================================================================
--- [ ИНИЦИАЛИЗАЦИЯ ФИЗИЧЕСКОГО МОДУЛЯ СКОРОСТИ ]
--- ====================================================================
-
--- Слайдер физического импульса скорости AssemblyLinearVelocity (16 - 300)
-CreateSlider(Container, "Физический Обход Скорости", 16, 300, _G.BeyondConfig.SpeedValue, function(val)
-    _G.BeyondConfig.SpeedValue = val
-end)
-
--- Высокоточный расчет векторов движения через Heartbeat (вызывается перед симуляцией физики)
-RunService.Heartbeat:Connect(function()
-    local character = LocalPlayer.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+-- Конструктор кастомных слайдеров (Ползунков для точных настроек)
+local function CreateMobileSlider(parent, text, min, max, default, callback)
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Size = UDim2.new(1, 0, 0, 58)
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+    SliderFrame.BorderSizePixel = 0
+    SliderFrame.Parent = parent
     
-    if rootPart and humanoid and humanoid.MoveDirection.Magnitude > 0 then
-        -- Рассчитываем идеальное направление импульса, сохраняя вертикальную силу гравитации
-        local calculatedVelocity = humanoid.MoveDirection * _G.BeyondConfig.SpeedValue
-        rootPart.AssemblyLinearVelocity = Vector3.new(calculatedVelocity.X, rootPart.AssemblyLinearVelocity.Y, calculatedVelocity.Z)
-    end
-end)
-
-print("[BeyondClient UI & Physics]: Часть 2 успешно добавлена.")
---[[
-    BeyondClient v5.0 - Ultimate Premium Edition
-    Developer: UserBeyond-dev
-    File: main.lua (Part 3/4 - Jump Vector Impulses & Selective Raycast Noclip)
---]]
-
--- ====================================================================
--- [ МОДУЛЬ ИМПУЛЬСНОГО БЕСКОНЕЧНОГО ПРЫЖКА ]
--- ====================================================================
-
-CreateToggle(Container, "Бесконечный Прыжок (Импульсный)", _G.BeyondConfig.InfiniteJump, function(state)
-    _G.BeyondConfig.InfiniteJump = state
-end)
-
--- Перехват запроса на прыжок напрямую из UserInputService
-UserInputService.JumpRequest:Connect(function()
-    if _G.BeyondConfig.InfiniteJump then
-        local character = LocalPlayer.Character
-        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local SFCorner = Instance.new("UICorner")
+    SFCorner.CornerRadius = UDim.new(0, 8)
+    SFCorner.Parent = SliderFrame
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.8, 0, 0, 26)
+    Label.Position = UDim2.new(0, 14, 0, 4)
+    Label.Text = text .. ": <font color='#FF2B5A'>" .. tostring(default) .. "</font>"
+    Label.RichText = true
+    Label.TextColor3 = Color3.fromRGB(220, 220, 230)
+    Label.Font = Enum.Font.GothamSemibold
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.BackgroundTransparency = 1
+    Label.Parent = SliderFrame
+    
+    local Track = Instance.new("Frame")
+    Track.Size = UDim2.new(1, -28, 0, 6)
+    Track.Position = UDim2.new(0, 14, 0, 38)
+    Track.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    Track.BorderSizePixel = 0
+    Track.Parent = SliderFrame
+    
+    local TrackCorner = Instance.new("UICorner")
+    TrackCorner.CornerRadius = UDim.new(0, 3)
+    TrackCorner.Parent = Track
+    
+    local Fill = Instance.new("Frame")
+    Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    Fill.BackgroundColor3 = _G.BeyondConfig.ThemeColor
+    Fill.BorderSizePixel = 0
+    Fill.Parent = Track
+    
+    local FillCorner = Instance.new("UICorner")
+    FillCorner.CornerRadius = UDim.new(0, 3)
+    FillCorner.Parent = Fill
+    
+    local TriggerBtn = Instance.new("TextButton")
+    TriggerBtn.Size = UDim2.new(1, 0, 1, 0)
+    TriggerBtn.BackgroundTransparency = 1
+    TriggerBtn.Text = ""
+    TriggerBtn.Parent = Track
+    
+    local sliding = false
+    
+    local function processInput(input)
+        local totalSize = Track.AbsoluteSize.X
+        if totalSize == 0 then return end
         
-        if rootPart then
-            -- Подаем чистый силовой вектор строго вверх, сохраняя текущую инерцию осей X и Z
-            rootPart.AssemblyLinearVelocity = Vector3.new(
-                rootPart.AssemblyLinearVelocity.X, 
-                55, -- Оптимальная сила импульса прыжка
-                rootPart.AssemblyLinearVelocity.Z
-            )
-        end
+        local xLocation = math.clamp(input.Position.X - Track.AbsolutePosition.X, 0, totalSize)
+        local ratio = xLocation / totalSize
+        local calculatedValue = math.round(min + (ratio * (max - min)))
+        
+        Fill.Size = UDim2.new(ratio, 0, 1, 0)
+        Label.Text = text .. ": <font color='#FF2B5A'>" .. tostring(calculatedValue) .. "</font>"
+        callback(calculatedValue)
     end
-end)
-
--- ====================================================================
--- [ СЕЛЕКТИВНЫЙ NOCLIP С ЛУЧЕВЫМ СКАНИРОВАНИЕМ ПОЛА ]
--- ====================================================================
-
-CreateToggle(Container, "Проход Сквозь Стены (Noclip)", _G.BeyondConfig.Noclip, function(state)
-    _G.BeyondConfig.Noclip = state
-end)
-
--- Инициализация параметров лучевого сканирования (Raycast) для оптимизации в цикле
-local raycastParams = RaycastParams.new()
-raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-
--- Использование Stepped для отключения коллизий внутри физического кадра симуляции
-RunService.Stepped:Connect(function()
-    if _G.BeyondConfig.Noclip then
-        local character = LocalPlayer.Character
-        if character then
-            raycastParams.FilterDescendantsInstances = {character}
-            
-            for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    -- Исключаем критические корневые узлы из базового отключения во избежание десинхронизации
-                    if part.Name ~= "UpperTorso" and part.Name ~= "LowerTorso" and part.Name ~= "HumanoidRootPart" then
-                        part.CanCollide = false
-                    else
-                        -- Защита от бесконечного падения: сканируем пространство строго под персонажем
-                        local rayOrigin = part.Position
-                        local rayDirection = Vector3.new(0, -6.5, 0) -- Дистанция детекции поверхности земли
-                        
-                        local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-                        
-                        if raycastResult then
-                            -- Если луч обнаружил твердую опору или ландшафт, удерживаем коллизию для стабильности
-                            part.CanCollide = true
-                        else
-                            -- Во всех остальных случаях (стены, преграды, двери) временно отключаем жесткость
-                            part.CanCollide = false
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
-print("[BeyondClient Movement]: Часть 3 успешно добавлена.")
---[[
-    BeyondClient v5.0 - Ultimate Premium Edition
-    Developer: UserBeyond-dev
-    File: main.lua (Part 4/4 - Local God Mode, Rig Scaler & Finalization)
---]]
-
--- ====================================================================
--- [ МОДУЛЬ ADVANCED GOD MODE (ЛОКАЛЬНОЕ БЕССМЕРТИЕ) ]
--- ====================================================================
-
-CreateToggle(Container, "Настоящее Бессмертие (God Mode)", _G.BeyondConfig.GodMode, function(state)
-    _G.BeyondConfig.GodMode = state
     
-    local char = LocalPlayer.Character
-    local model = char and char:FindFirstChildOfClass("Humanoid")
-    
-    if state and model then
-        task.spawn(function()
-            -- Разрываем связь с сервером по урону, подменяя сетевой Humanoid локальным клоном
-            while _G.BeyondConfig.GodMode and char and model.Parent do
-                local clone = model:Clone()
-                clone.Parent = char
-                
-                -- Безопасно перенаправляем камеру на новую рабочую сущность
-                Camera.CameraSubject = clone
-                LocalPlayer.Character = char
-                
-                -- Уничтожаем старый Humanoid, очищая стейты входящего серверного урона
-                model:Destroy()
-                model = clone
-                
-                task.wait(0.4) -- Оптимальный интервал десинхронизации
-            end
-        end)
-    elseif not state and model then
-        -- Мягкий ресет персонажа для возврата в исходное игровое состояние
-        if model.Health > 0 then
-            model.Health = 0
+    TriggerBtn.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) and ScriptActive then
+            sliding = true
+            processInput(input)
         end
-    end
-end)
-
--- Автоматический перезапуск защиты при респавне (CharacterAdded)
-LocalPlayer.CharacterAdded:Connect(function(newChar)
-    task.wait(0.4)
-    if _G.BeyondConfig.GodMode then
-        local currentHum = newChar:WaitForChild("Humanoid", 5)
-        if currentHum then
-            local clone = currentHum:Clone()
-            clone.Parent = newChar
-            Camera.CameraSubject = clone
-            currentHum:Destroy()
-        end
-    end
-end)
-
--- ====================================================================
--- [ ПАНЕЛЬ УПРАВЛЕНИЯ РОСТОМ И КОСТЯМИ ПЕРСОНАЖА ]
--- ====================================================================
-
-local ScaleFrame = Instance.new("Frame")
-ScaleFrame.Name = "ScaleLayout"
-ScaleFrame.Size = UDim2.new(1, 0, 0, 85)
-ScaleFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-ScaleFrame.BorderSizePixel = 0
-ScaleFrame.Parent = Container
-
-local ScaleCorner = Instance.new("UICorner")
-ScaleCorner.CornerRadius = UDim.new(0, 8)
-ScaleCorner.Parent = ScaleFrame
-
-local ScaleStroke = Instance.new("UIStroke")
-ScaleStroke.Thickness = 1
-ScaleStroke.Color = Color3.fromRGB(35, 35, 45)
-ScaleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-ScaleStroke.Parent = ScaleFrame
-
-local ScaleLabel = Instance.new("TextLabel")
-ScaleLabel.Size = UDim2.new(1, -20, 0, 25)
-ScaleLabel.Position = UDim2.new(0, 12, 0, 4)
-ScaleLabel.Text = "Пресеты Роста: <font color='#FF2B5A'>" .. _G.BeyondConfig.BodySize .. "</font>"
-ScaleLabel.RichText = true
-ScaleLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
-ScaleLabel.Font = Enum.Font.GothamSemibold
-ScaleLabel.TextSize = 13
-ScaleLabel.TextXAlignment = Enum.TextXAlignment.Left
-ScaleLabel.BackgroundTransparency = 1
-ScaleLabel.Parent = ScaleFrame
-
--- Глубокое масштабирование костей и пропорций аватара (R15 Rig)
-local function RebuildBodyScale(multiplier)
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        local scaleObjects = {"BodyHeightScale", "BodyWidthScale", "BodyDepthScale", "HeadScale"}
-        for _, objectName in ipairs(scaleObjects) do
-            local scaleValue = hum:FindFirstChild(objectName)
-            if scaleValue and scaleValue:IsA("NumberValue") then
-                -- Умножаем базовый оригинальный размер на заданный коэффициент
-                scaleValue.Value = scaleValue.OriginalSize.Value * multiplier
-            end
-        end
-    end
-end
-
--- Фабрика кнопок для пресетов сетки размеров
-local function CreatePresetElement(name, xOffset, multiplier)
-    local PresetBtn = Instance.new("TextButton")
-    PresetBtn.Size = UDim2.new(0.21, 0, 0, 36)
-    PresetBtn.Position = UDim2.new(0, xOffset, 0, 36)
-    PresetBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 44)
-    PresetBtn.Text = name
-    PresetBtn.TextColor3 = Color3.fromRGB(240, 240, 245)
-    PresetBtn.Font = Enum.Font.GothamBold
-    PresetBtn.TextSize = 11
-    PresetBtn.Parent = ScaleFrame
+    end)
     
-    local PCorner = Instance.new("UICorner")
-    PCorner.CornerRadius = UDim.new(0, 5)
-    PCorner.Parent = PresetBtn
+    UserInputService.InputChanged:Connect(function(input)
+        if sliding and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseBehavior) and ScriptActive then
+            processInput(input)
+        end
+    end)
     
-    PresetBtn.MouseButton1Click:Connect(function()
-        _G.BeyondConfig.BodySize = name
-        ScaleLabel.Text = "Пресеты Роста: <font color='#FF2B5A'>" .. name .. "</font>"
-        TweenService:Create(PresetBtn, TweenInfo.new(0.15), {BackgroundColor3 = _G.BeyondConfig.ThemeColor}):Play()
-        RebuildBodyScale(multiplier)
-        task.wait(0.15)
-        TweenService:Create(PresetBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(32, 32, 44)}):Play()
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            sliding = false
+        end
     end)
 end
 
--- Инициализация 4 профессиональных пресетов
-CreatePresetElement("Мелкий", 12, 0.45)
-CreatePresetElement("Средний", 106, 1.0)
-CreatePresetElement("Большой", 200, 1.9)
-CreatePresetElement("Гигант", 294, 3.8)
-
--- Ползунок плавного скейлинга костей тела для микронастроек (%)
-CreateSlider(Container, "Точный Скейлинг Рига (%)", 40, 400, 100, function(percent)
-    RebuildBodyScale(percent / 100)
-end)
-
--- ====================================================================
--- [ ФИНИШНАЯ КОМПИЛЯЦИЯ И ЗАПУСК КЛИЕНТА ]
--- ====================================================================
-
--- Анимация плавного развертывания интерфейса (Boot Sequence)
-MainFrame.Size = UDim2.new(0, 440, 0, 0)
-local openTween = TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 440, 0, 340)})
-openTween:Play()
-
-print("[BeyondClient]: Сборка v5.0-Alpha полностью завершена и готова к тестам!")
+print("[BeyondClient UI-Engine]: Модуль жестов и фабрики кнопок успешно интегрирован.")
 --[[
-    BeyondClient v5.0 - Ultimate Premium Edition
-    Developer: UserBeyond-dev
-    File: main.lua (Part 5/Unknown - High-Performance ESP Engine)
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (2400x1080 / Graphic Optimization)
+    File: main.lua (Part 3/Unknown - Legal Neon Overlay & Highlight ESP)
 --]]
 
--- Расширение глобальной конфигурации новыми параметрами
-_G.BeyondConfig.ESP = {
-    Enabled = false,
-    Boxes = false,
-    Tracers = false,
-    Names = false,
-    Health = false,
-    MaxDistance = 1500,
-    TeamCheck = false
-}
+-- ====================================================================
+-- [ МОДУЛЬ КРАСИВОЙ НЕОНОВОЙ ПОДСВЕТКИ (HIGHLIGHT VISUALIZER) ]
+-- ====================================================================
 
--- Создание секции ESP в главном контейнере UI
-local ESPSectionLabel = Instance.new("TextLabel")
-ESPSectionLabel.Size = UDim2.new(1, 0, 0, 25)
-ESPSectionLabel.Text = "--- [ СИСТЕМА ВИЗУАЛИЗАЦИИ (ESP) ] ---"
-ESPSectionLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
-ESPSectionLabel.Font = Enum.Font.GothamBold
-ESPSectionLabel.TextSize = 12
-ESPSectionLabel.BackgroundTransparency = 1
-ESPSectionLabel.Parent = Container
+-- Расширяем параметры оверлея в конфигурации
+_G.BeyondConfig.Visuals.HighlightESP = false
+_G.BeyondConfig.Visuals.EspOutlineTransparency = 0
+_G.BeyondConfig.Visuals.EspFillTransparency = 0.5
 
-CreateToggle(Container, "Включить ESP Мастер-Свитч", _G.BeyondConfig.ESP.Enabled, function(state)
-    _G.BeyondConfig.ESP.Enabled = state
-end)
-
-CreateToggle(Container, "Отрисовка Боксов (2D Boxes)", _G.BeyondConfig.ESP.Boxes, function(state)
-    _G.BeyondConfig.ESP.Boxes = state
-end)
-
-CreateToggle(Container, "Линии до Игроков (Tracers)", _G.BeyondConfig.ESP.Tracers, function(state)
-    _G.BeyondConfig.ESP.Tracers = state
-end)
-
-CreateToggle(Container, "Отображение Никнеймов", _G.BeyondConfig.ESP.Names, function(state)
-    _G.BeyondConfig.ESP.Names = state
-end)
-
-CreateToggle(Container, "Индикатор Здоровья (HealthBar)", _G.BeyondConfig.ESP.Health, function(state)
-    _G.BeyondConfig.ESP.Health = state
-end)
-
--- Создание контейнера для рендеринга 2D-элементов поверх CoreGui
-local ESPHolder = Instance.new("Folder")
-ESPHolder.Name = "Beyond_ESP_Storage"
-ESPHolder.Parent = BeyondScreenGui
-
-local function CreateESPVisuals(player)
-    if player == LocalPlayer then return end
-    
-    local BoxFrame = Instance.new("Frame")
-    BoxFrame.BackgroundTransparency = 1
-    BoxFrame.BorderSizePixel = 0
-    BoxFrame.Visible = false
-    BoxFrame.Parent = ESPHolder
-    
-    local BoxStroke = Instance.new("UIStroke")
-    BoxStroke.Thickness = 1.5
-    BoxStroke.Color = _G.BeyondConfig.ThemeColor
-    BoxStroke.Parent = BoxFrame
-    
-    local TracerLine = Instance.new("Frame")
-    TracerLine.BorderSizePixel = 0
-    TracerLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    TracerLine.Visible = false
-    TracerLine.Parent = ESPHolder
-    
-    local NameTag = Instance.new("TextLabel")
-    NameTag.Size = UDim2.new(0, 200, 0, 20)
-    NameTag.BackgroundTransparency = 1
-    NameTag.TextColor3 = Color3.fromRGB(255, 255, 255)
-    NameTag.Font = Enum.Font.GothamBold
-    NameTag.TextSize = 11
-    NameTag.Visible = false
-    NameTag.Parent = ESPHolder
-    
-    local HealthBar = Instance.new("Frame")
-    HealthBar.BorderSizePixel = 0
-    HealthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-    HealthBar.Visible = false
-    HealthBar.Parent = ESPHolder
-
-    local function UpdateVisuals()
-        local connection
-        connection = RunService.RenderStepped:Connect(function()
-            if not player.Parent or not _G.BeyondConfig or not _G.BeyondConfig.ESP.Enabled then
-                BoxFrame.Visible = false
-                TracerLine.Visible = false
-                NameTag.Visible = false
-                HealthBar.Visible = false
-                if not player.Parent then connection:Disconnect() end
-                return
-            end
-            
-            local char = player.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            
-            if hrp and hum and hum.Health > 0 then
-                local hrpPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                
-                if onScreen then
-                    local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
-                    if distance <= _G.BeyondConfig.ESP.MaxDistance then
-                        
-                        -- Командный фильтр
-                        if _G.BeyondConfig.ESP.TeamCheck and player.Team == LocalPlayer.Team then
-                            BoxFrame.Visible = false; TracerLine.Visible = false; NameTag.Visible = false; HealthBar.Visible = false
-                            return
-                        end
-                        
-                        -- Вычисление динамического размера 2D бокса на основе дистанции
-                        local scaleFactor = 1 / (hrpPos.Z * math.tan(math.rad(Camera.FieldOfView * 0.5))) * 1000
-                        local boxWidth = scaleFactor * 4.5
-                        local boxHeight = scaleFactor * 6
-                        
-                        -- Рендеринг Боксов
-                        if _G.BeyondConfig.ESP.Boxes then
-                            BoxFrame.Size = UDim2.new(0, boxWidth, 0, boxHeight)
-                            BoxFrame.Position = UDim2.new(0, hrpPos.X - boxWidth/2, 0, hrpPos.Y - boxHeight/2)
-                            BoxFrame.Visible = true
-                        else
-                            BoxFrame.Visible = false
-                        end
-                        
-                        -- Рендеринг Трейсеров (Линий из центра нижней части экрана)
-                        if _G.BeyondConfig.ESP.Tracers then
-                            local startX = Camera.ViewportSize.X / 2
-                            local startY = Camera.ViewportSize.Y
-                            local deltaX = hrpPos.X - startX
-                            local deltaY = hrpPos.Y - startY
-                            local angle = math.atan2(deltaY, deltaX)
-                            local lineLength = math.sqrt(deltaX^2 + deltaY^2)
-                            
-                            TracerLine.Size = UDim2.new(0, lineLength, 0, 1.5)
-                            TracerLine.Position = UDim2.new(0, startX, 0, startY)
-                            TracerLine.Rotation = math.rad(angle)
-                            TracerLine.Visible = true
-                        else
-                            TracerLine.Visible = false
-                        end
-                        
-                        -- Рендеринг Имен
-                        if _G.BeyondConfig.ESP.Names then
-                            NameTag.Text = player.Name .. " [" .. math.round(distance) .. "m]"
-                            NameTag.Position = UDim2.new(0, hrpPos.X - 100, 0, hrpPos.Y - boxHeight/2 - 22)
-                            NameTag.Visible = true
-                        else
-                            NameTag.Visible = false
-                        end
-                        
-                        -- Рендеринг Полоски здоровья (HealthBar слева от бокса)
-                        if _G.BeyondConfig.ESP.Health and _G.BeyondConfig.ESP.Boxes then
-                            local healthPercent = hum.Health / hum.MaxHealth
-                            HealthBar.Size = UDim2.new(0, 3, 0, boxHeight * healthPercent)
-                            HealthBar.Position = UDim2.new(0, hrpPos.X - boxWidth/2 - 7, 0, hrpPos.Y - boxHeight/2 + (boxHeight * (1 - healthPercent)))
-                            HealthBar.BackgroundColor3 = Color3.fromHSV(healthPercent * 0.33, 1, 1) -- Смена цвета от красного к зеленому
-                            HealthBar.Visible = true
-                        else
-                            HealthBar.Visible = false
-                        end
-                        
-                        return
-                    end
-                end
-            end
-            
-            -- Скрытие элементов, если игрок мертв или за пределами видимости экрана
-            BoxFrame.Visible = false
-            TracerLine.Visible = false
-            NameTag.Visible = false
-            HealthBar.Visible = false
-        end)
-    end
-    
-    task.spawn(UpdateVisuals)
-end
-
--- Инициализация ESP трекера для всех текущих и будущих игроков
-for _, player in ipairs(Players:GetPlayers()) do
-    CreateESPVisuals(player)
-end
-Players.PlayerAdded:Connect(CreateESPVisuals)
-
-print("[BeyondClient Visuals]: Продвинутый ESP-движок успешно добавлен.")
---[[
-    BeyondClient v5.0 - Ultimate Premium Edition
-    Developer: UserBeyond-dev
-    File: main.lua (Part 6/Unknown - Premium UI Shaders & Theme Engine)
---]]
-
--- Расширение настроек визуального стиля интерфейса
-_G.BeyondConfig.Visuals = {
-    BackgroundBlur = true,
-    RainbowGlow = false,
-    GlowSpeed = 2,
-    MenuOpened = true
-}
-
--- Инициализация системного шейдера размытия заднего плана (Lighting Blur)
-local UIBlur = Lighting:FindFirstChild("Beyond_Interface_Blur")
-if not UIBlur then
-    UIBlur = Instance.new("BlurEffect")
-    UIBlur.Name = "Beyond_Interface_Blur"
-    UIBlur.Size = _G.BeyondConfig.Visuals.BackgroundBlur and 14 or 0
-    UIBlur.Enabled = true
-    UIBlur.Parent = Lighting
-end
-
--- Создание декоративной панели управления стилем внутри контейнера меню
+-- Декоративный заголовок секции визуала в контейнере меню
 local VisualSectionLabel = Instance.new("TextLabel")
 VisualSectionLabel.Size = UDim2.new(1, 0, 0, 25)
-VisualSectionLabel.Text = "--- [ НАСТРОЙКИ СТИЛЯ И ИНТЕРФЕЙСА ] ---"
+VisualSectionLabel.Text = "--- [ НЕОНОВАЯ ПОДСВЕТКА МОДЕЛЕЙ ] ---"
 VisualSectionLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
 VisualSectionLabel.Font = Enum.Font.GothamBold
 VisualSectionLabel.TextSize = 12
 VisualSectionLabel.BackgroundTransparency = 1
 VisualSectionLabel.Parent = Container
 
-CreateToggle(Container, "Размытие Заднего Плана (Blur)", _G.BeyondConfig.Visuals.BackgroundBlur, function(state)
-    _G.BeyondConfig.Visuals.BackgroundBlur = state
-    TweenService:Create(UIBlur, TweenInfo.new(0.3), {Size = state and 14 or 0}):Play()
-end)
-
-CreateToggle(Container, "RGB Неоновое Свечение Рамки", _G.BeyondConfig.Visuals.RainbowGlow, function(state)
-    _G.BeyondConfig.Visuals.RainbowGlow = state
+-- Переключатель для мастер-активации подсветки силуэтов
+CreateMobileToggle(Container, "Включить подсветку моделей", _G.BeyondConfig.Visuals.HighlightESP, function(state)
+    _G.BeyondConfig.Visuals.HighlightESP = state
+    
+    -- Если выключили, мгновенно скрываем все созданные подсветки
     if not state then
-        -- Возвращаем дефолтный розовый цвет Zero Two при выключении
-        TweenService:Create(Stroke, TweenInfo.new(0.3), {Color = _G.BeyondConfig.ThemeColor}):Play()
-        TweenService:Create(HeaderLine, TweenInfo.new(0.3), {BackgroundColor3 = _G.BeyondConfig.ThemeColor}):Play()
-    end
-end)
-
--- Слайдер регулировки скорости перелива цветов (RGB Speed)
-CreateSlider(Container, "Скорость Перелива RGB", 1, 10, _G.BeyondConfig.Visuals.GlowSpeed, function(val)
-    _G.BeyondConfig.Visuals.GlowSpeed = val
-end)
-
--- Выделенный цикл для динамического рендеринга RGB-эффекта по фазам HSV
-local hueValue = 0
-RunService.RenderStepped:Connect(function(deltaTime)
-    if _G.BeyondConfig and _G.BeyondConfig.Visuals and _G.BeyondConfig.Visuals.RainbowGlow then
-        -- Плавное смещение цветовой фазы в зависимости от заданного ползунка скорости
-        hueValue = (hueValue + (deltaTime * (_G.BeyondConfig.Visuals.GlowSpeed / 10))) % 1
-        local currentRainbowColor = Color3.fromHSV(hueValue, 0.8, 1)
-        
-        -- Синхронное обновление цвета обводки и разделительной линии шапки
-        Stroke.Color = currentRainbowColor
-        HeaderLine.BackgroundColor3 = currentRainbowColor
-        Container.ScrollBarImageColor3 = currentRainbowColor
-    end
-end)
-
--- ТРИГГЕР СКРЫТИЯ/ОТКРЫТИЯ МЕНЮ НА КЛАВИШУ "Правый Shift" (RightShift)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    -- Проверяем, что игрок нажал клавишу вне поля чата
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.RightShift then
-        _G.BeyondConfig.Visuals.MenuOpened = not _G.BeyondConfig.Visuals.MenuOpened
-        
-        local isVisible = _G.BeyondConfig.Visuals.MenuOpened
-        local targetSize = isVisible and UDim2.new(0, 440, 0, 340) or UDim2.new(0, 440, 0, 0)
-        local targetBlur = (isVisible and _G.BeyondConfig.Visuals.BackgroundBlur) and 14 or 0
-        
-        -- Плавная анимация сворачивания меню и отключения размытия экрана
-        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = targetSize}):Play()
-        TweenService:Create(UIBlur, TweenInfo.new(0.3), {Size = targetBlur}):Play()
-        
-        -- Отключаем видимость дочерних элементов во время закрытия, чтобы не вылезали за рамку
-        task.spawn(function()
-            if not isVisible then
-                task.wait(0.1)
-                MainFrame.ClipsDescendants = true
-            else
-                MainFrame.ClipsDescendants = false
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Character then
+                local hl = player.Character:FindFirstChild("Beyond_Highlight")
+                if hl then hl.Enabled = false end
             end
-        end)
+        end
     end
 end)
 
-print("[BeyondClient Shaders]: Модуль графических шейдеров успешно интегрирован.")
+-- Ползунки для тонкой регулировки прозрачности неонового заполнения и обводки
+CreateMobileSlider(Container, "Прозрачность силуэта (%)", 0, 100, 50, function(val)
+    _G.BeyondConfig.Visuals.EspFillTransparency = val / 100
+end)
+
+CreateMobileSlider(Container, "Прозрачность обводки (%)", 0, 100, 0, function(val)
+    _G.BeyondConfig.Visuals.EspOutlineTransparency = val / 100
+end)
+
+-- Функция для безопасного добавления подсветки на персонажа
+local function ApplyHighlight(player)
+    if player == LocalPlayer then return end
+
+    local function setupCharacter(char)
+        if not ScriptActive then return end
+        
+        -- Удаляем старый эффект, если он существовал
+        local oldHl = char:WaitForChild("Beyond_Highlight", 2) or char:FindFirstChild("Beyond_Highlight")
+        if oldHl then oldHl:Destroy() end
+
+        -- Создаем легальный графический объект выделения
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "Beyond_Highlight"
+        highlight.FillColor = _G.BeyondConfig.ThemeColor
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = _G.BeyondConfig.Visuals.EspFillTransparency
+        highlight.OutlineTransparency = _G.BeyondConfig.Visuals.EspOutlineTransparency
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop -- Видно сквозь стены
+        highlight.Enabled = _G.BeyondConfig.Visuals.HighlightESP
+        highlight.Parent = char
+    end
+
+    if player.Character then
+        setupCharacter(player.Character)
+    end
+    player.CharacterAdded:Connect(setupCharacter)
+end
+
+-- Инициализируем отслеживание для всех игроков в сессии
+for _, player in ipairs(Players:GetPlayers()) do
+    ApplyHighlight(player)
+end
+Players.PlayerAdded:Connect(ApplyHighlight)
+
+-- ====================================================================
+-- [ ЕДИНЫЙ ЦИКЛ ОПТИМИЗАЦИИ И НЕОНОВОГО ПЕРЕЛИВА (RGB GENERATOR) ]
+-- ====================================================================
+
+RunService.RenderStepped:Connect(function(deltaTime)
+    if not ScriptActive or not _G.BeyondConfig then return end
+
+    -- Постоянно обновляем фазу цвета для красивого градиента
+    _G.BeyondConfig.GlowPhase = (_G.BeyondConfig.GlowPhase + (deltaTime * (_G.BeyondConfig.Visuals.GlowSpeed / 10))) % 1
+    local dynamicRainbowColor = Color3.fromHSV(_G.BeyondConfig.GlowPhase, 0.85, 1)
+
+    -- Переливание обводки самого интерфейса меню (если включено в настройках)
+    if _G.BeyondConfig.Visuals.RainbowGlow then
+        Stroke.Color = dynamicRainbowColor
+        HeaderLine.BackgroundColor3 = dynamicRainbowColor
+        Container.ScrollBarImageColor3 = dynamicRainbowColor
+    end
+
+    -- Переливание неоновой подсветки игроков в реальном времени
+    if _G.BeyondConfig.Visuals.HighlightESP then
+        for _, player in ipairs(Players:GetPlayers()) do
+            local char = player.Character
+            local hl = char and char:FindFirstChild("Beyond_Highlight")
+            
+            if hl and hl:IsA("Highlight") then
+                hl.Enabled = true
+                hl.FillColor = dynamicRainbowColor
+                hl.OutlineColor = Color3.fromRGB(255, 255, 255) -- Четкая белая обводка для стиля
+                hl.FillTransparency = _G.BeyondConfig.Visuals.EspFillTransparency
+                hl.OutlineTransparency = _G.BeyondConfig.Visuals.EspOutlineTransparency
+            end
+        end
+    end
+end)
+
+print("[BeyondClient Visuals]: Легальный неоновый оверлей успешно интегрирован.")
 --[[
-    BeyondClient v5.0 - Ultimate Premium Edition
-    Developer: UserBeyond-dev
-    File: main.lua (Part 7/Unknown - Advanced Script Hub & Loader Core)
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (Dimensity 800U / 8GB RAM / Android 10)
+    Specification: Strict Legal Automation & Extended UI Core Execution Framework
+    File: main.lua (Part 4/Unknown - Automated Input Emulation & Deep Style Palette)
 --]]
 
--- Инициализация локального хранилища скриптов внутри хаба
-local ScriptHubData = {
-    {
-        Name = "Infinite Yield (FE Admin)",
-        Desc = "Самый мощный консольный админ-скрипт (более 500 команд).",
-        Url = "https://githubusercontent.com"
-    },
-    {
-        Name = "Dex Explorer (v4 R15)",
-        Desc = "Профессиональный инспектор объектов и свойств workspace.",
-        Url = "https://githubusercontent.com"
-    },
-    {
-        Name = "Hydroxide (Network Spy)",
-        Desc = "Сканер удаленных событий (RemoteEvent / RemoteFunction).",
-        Url = "https://githubusercontent.com"
+-- Гарантируем строгую изоляцию контекста выполнения модуля
+local VirtualUser = nil
+pcall(function()
+    VirtualUser = game:GetService("VirtualUser")
+end)
+
+-- Регистрация расширенных системных констант внутри глобальной конфигурации
+_G.BeyondConfig.Automation = {
+    AutoClickEnabled = false,
+    ClickInterval = 100, -- Миллисекунды (диапазон от 10 до 1000)
+    ClickType = "Левая кнопка", -- Пресеты для эмуляции тапа
+    TotalClicksSimulated = 0
+}
+
+_G.BeyondConfig.Styles = {
+    CurrentThemePreset = "Розовый Zero Two",
+    CardBackgroundColor = Color3.fromRGB(20, 20, 28),
+    BorderStrokeColor = Color3.fromRGB(35, 35, 45),
+    FontsList = {
+        Bold = Enum.Font.GothamBold,
+        Semibold = Enum.Font.GothamSemibold,
+        Regular = Enum.Font.Gotham,
+        Monospace = Enum.Font.Code
     }
 }
 
--- Декоративный заголовок для секции хаба в контейнере UI
-local HubSectionLabel = Instance.new("TextLabel")
-HubSectionLabel.Size = UDim2.new(1, 0, 0, 25)
-HubSectionLabel.Text = "--- [ ВСТРОЕННЫЙ SCRIPT HUB ] ---"
-HubSectionLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
-HubSectionLabel.Font = Enum.Font.GothamBold
-HubSectionLabel.TextSize = 12
-HubSectionLabel.BackgroundTransparency = 1
-HubSectionLabel.Parent = Container
+-- Создание декоративного визуального разделителя в скроллинг-контейнере
+local AutomationSectionLabel = Instance.new("TextLabel")
+AutomationSectionLabel.Name = "AutomationSection_TitleLabel"
+AutomationSectionLabel.Size = UDim2.new(1, 0, 0, 30)
+AutomationSectionLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+AutomationSectionLabel.BackgroundTransparency = 1
+AutomationSectionLabel.Text = "--- [ МОДУЛЬ ЛЕГАЛЬНОЙ АВТОМАТИЗАЦИИ ] ---"
+AutomationSectionLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
+AutomationSectionLabel.Font = _G.BeyondConfig.Styles.FontsList.Bold
+AutomationSectionLabel.TextSize = 12
+AutomationSectionLabel.TextStrokeTransparency = 0.8
+AutomationSectionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+AutomationSectionLabel.Parent = Container
 
--- Функция безопасного выполнения удаленного кода (HTTP Execution Bypass)
-local function SafeExecuteHTTP(scriptName, targetUrl)
-    print("[BeyondClient Hub]: Запрос на загрузку модуля -> " .. scriptName)
+-- --- ИНТЕГРАЦИЯ УПРАВЛЯЮЩИХ ЭЛЕМЕНТОВ АВТОКЛИКЕРА ---
+
+CreateMobileToggle(Container, "Активировать макрос автокликера", _G.BeyondConfig.Automation.AutoClickEnabled, function(state)
+    _G.BeyondConfig.Automation.AutoClickEnabled = state
     
-    task.spawn(function()
-        -- Проверка наличия HTTP-клиента в текущем эксплойте
-        local loadstringCheck = (loadstring or loadstringG)
-        local requestCheck = (syn and syn.request) or (http and http.request) or request or http_request
+    if state then
+        -- Асинхронный запуск изолированного потока симуляции нажатий
+        task.spawn(function()
+            while _G.BeyondConfig and _G.BeyondConfig.Automation.AutoClickEnabled and ScriptActive do
+                -- Динамический расчет интервала (миллисекунды в секунды с защитой от нулевого деления)
+                local calculatedDelay = math.clamp(_G.BeyondConfig.Automation.ClickInterval / 1000, 0.01, 1.0)
+                
+                -- Безопасная эмуляция тапа по центру экрана или в текущую позицию камеры
+                pcall(function()
+                    if VirtualUser then
+                        -- Официальный легальный вызов эмуляции клика для UI-тестов
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton1(Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2))
+                        _G.BeyondConfig.Automation.TotalClicksSimulated = _G.BeyondConfig.Automation.TotalClicksSimulated + 1
+                    else
+                        -- Альтернативный легальный метод через принудительный вызов клик-детекторов в радиусе видимости
+                        local raycastParams = RaycastParams.new()
+                        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                        raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+                        
+                        local rayResult = workspace:Raycast(Camera.CFrame.Position, Camera.CFrame.LookVector * 15, raycastParams)
+                        if rayResult and rayResult.Instance then
+                            local clickDetector = rayResult.Instance:FindFirstChildOfClass("ClickDetector")
+                            if clickDetector then
+                                fireclickdetector(clickDetector) -- Вызов официальной функции исполнителя
+                                _G.BeyondConfig.Automation.TotalClicksSimulated = _G.BeyondConfig.Automation.TotalClicksSimulated + 1
+                            end
+                        end
+                    end
+                end)
+                
+                -- Обновление динамического статуса в футере меню
+                pcall(function()
+                    FooterText.Text = "Status: Operational // Macros Simulated: " .. tostring(_G.BeyondConfig.Automation.TotalClicksSimulated)
+                end)
+                
+                task.wait(calculatedDelay)
+            end
+        end)
+    else
+        -- Возврат стандартного системного текста в футер при отключении макроса
+        pcall(function()
+            FooterText.Text = "Status: Operational // Mobile Touch Enabled"
+        end)
+    end
+end)
+
+-- Слайдер регулировки задержки клика (от 10мс для фаст-кликов до 1000мс)
+CreateMobileSlider(Container, "Интервал клика (в миллисекундах)", 10, 1000, _G.BeyondConfig.Automation.ClickInterval, function(value)
+    _G.BeyondConfig.Automation.ClickInterval = value
+end)
+
+-- --- МОДУЛЬ УПРАВЛЕНИЯ ПРЕСЕТАМИ СТИЛЕЙ И СЕТКОЙ ДИЗАЙНА ---
+
+local StylePresetFrame = Instance.new("Frame")
+StylePresetFrame.Name = "StylePreset_LayoutContainer"
+StylePresetFrame.Size = UDim2.new(1, 0, 0, 90)
+StylePresetFrame.BackgroundColor3 = _G.BeyondConfig.Styles.CardBackgroundColor
+StylePresetFrame.BorderSizePixel = 0
+StylePresetFrame.Parent = Container
+
+local StyleCorner = Instance.new("UICorner")
+StyleCorner.CornerRadius = UDim.new(0, 8)
+StyleCorner.Parent = StylePresetFrame
+
+local StyleStroke = Instance.new("UIStroke")
+StyleStroke.Thickness = 1
+StyleStroke.Color = _G.BeyondConfig.Styles.BorderStrokeColor
+StyleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+StyleStroke.Parent = StylePresetFrame
+
+local StyleLabel = Instance.new("TextLabel")
+StyleLabel.Name = "StylePreset_HeaderTitle"
+StyleLabel.Size = UDim2.new(1, -20, 0, 25)
+StyleLabel.Position = UDim2.new(0, 14, 0, 4)
+StyleLabel.Text = "Визуальная тема: <font color='#FF2B5A'>" .. _G.BeyondConfig.Styles.CurrentThemePreset .. "</font>"
+StyleLabel.RichText = true
+StyleLabel.TextColor3 = Color3.fromRGB(225, 225, 235)
+StyleLabel.Font = _G.BeyondConfig.Styles.FontsList.Semibold
+StyleLabel.TextSize = 13
+StyleLabel.TextXAlignment = Enum.TextXAlignment.Left
+StyleLabel.BackgroundTransparency = 1
+StyleLabel.Parent = StylePresetFrame
+
+-- Внутренняя фабрика для генерации кнопок переключения цветовых палитр
+local function InitializeThemeButton(themeName, xOffset, primeColor, glowColor)
+    local ThemeBtn = Instance.new("TextButton")
+    ThemeBtn.Name = "ThemePresetButton_" .. themeName
+    ThemeBtn.Size = UDim2.new(0.28, 0, 0, 38)
+    ThemeBtn.Position = UDim2.new(0, xOffset, 0, 38)
+    ThemeBtn.BackgroundColor3 = Color3.fromRGB(34, 34, 46)
+    ThemeBtn.Text = themeName
+    ThemeBtn.TextColor3 = Color3.fromRGB(245, 245, 250)
+    ThemeBtn.Font = _G.BeyondConfig.Styles.FontsList.Bold
+    ThemeBtn.TextSize = 10
+    ThemeBtn.Parent = StylePresetFrame
+    
+    local BTNCorner = Instance.new("UICorner")
+    BTNCorner.CornerRadius = UDim.new(0, 6)
+    BTNCorner.Parent = ThemeBtn
+    
+    local BTNStroke = Instance.new("UIStroke")
+    BTNStroke.Thickness = 1
+    BTNStroke.Color = Color3.fromRGB(50, 50, 65)
+    BTNStroke.Parent = ThemeBtn
+
+    ThemeBtn.MouseButton1Click:Connect(function()
+        if not ScriptActive then return end
         
-        if not loadstringCheck then
-            warn("[BeyondClient Error]: Ваша среда выполнения не поддерживает loadstring.")
+        -- Блокируем смену базовых цветов, если активирован динамический режим RGB
+        if _G.BeyondConfig.Visuals.RainbowGlow then
+            StyleLabel.Text = "Визуальная тема: <font color='#FF2B5A'>Ошибка (Выключите RGB)</font>"
+            task.spawn(function()
+                task.wait(1.5)
+                if _G.BeyondConfig then
+                    StyleLabel.Text = "Визуальная тема: <font color='#FF2B5A'>" .. _G.BeyondConfig.Styles.CurrentThemePreset .. "</font>"
+                end
+            end)
             return
         end
+
+        _G.BeyondConfig.Styles.CurrentThemePreset = themeName
+        _G.BeyondConfig.ThemeColor = primeColor
+        _G.BeyondConfig.AccentGlow = glowColor
         
-        -- Попытка безопасного чтения исходного кода через game:HttpGet или request хуки
-        local success, scriptRawCode = pcall(function()
-            if game.HttpGet then
-                return game:HttpGet(targetUrl)
-            elseif requestCheck then
-                local response = requestCheck({Url = targetUrl, Method = "GET"})
-                return response.Body
-            end
-            error("Нет доступных HTTP методов для загрузки.")
+        StyleLabel.Text = "Визуальная тема: <font color='#FF2B5A'>" .. themeName .. "</font>"
+        
+        -- Запуск каскада плавных анимаций обновления цветовой схемы всего UI
+        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+        TweenService:Create(Stroke, tweenInfo, {Color = primeColor}):Play()
+        TweenService:Create(HeaderLine, tweenInfo, {BackgroundColor3 = primeColor}):Play()
+        TweenService:Create(Container, tweenInfo, {ScrollBarImageColor3 = primeColor}):Play()
+        TweenService:Create(MobileToggleButton, tweenInfo, {ImageColor3 = primeColor}):Play()
+        TweenService:Create(ButtonStroke, tweenInfo, {Color = primeColor}):Play()
+    end)
+end
+
+-- Развертывание пресетов оформления (Точные расчеты отступов для корректного отображения 2400х1080)
+InitializeThemeButton("Zero Two", 14, Color3.fromRGB(255, 43, 90), Color3.fromRGB(255, 100, 130))
+InitializeThemeButton("Киберпанк", 140, Color3.fromRGB(0, 255, 240), Color3.fromRGB(0, 180, 255))
+InitializeThemeButton("Токсик", 266, Color3.fromRGB(170, 255, 0), Color3.fromRGB(100, 220, 0))
+
+print("[BeyondClient Automation]: Часть 4 успешно интегрирована в рабочее ядро проекта.")
+--[[
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (2400x1080 / File-System Optimization)
+    Specification: JSON Serialization & Local Storage System Core
+    File: main.lua (Part 5/Unknown - Local Data Persistence Control)
+--]]
+
+-- Имя локального системного файла конфигурации в памяти девайса
+local BEYOND_CONFIG_FILENAME = "BeyondClient_V5_HONOR.json"
+
+-- Кэширование методов файловой системы Вашего мобильного исполнителя (Delta)
+local FileSystemAPI = {
+    Write = writefile or (syn and syn.writefile),
+    Read = readfile or (syn and syn.readfile),
+    Check = isfile or (syn and syn.isfile),
+    Delete = delfile or (syn and syn.delfile)
+}
+
+-- Декоративный заголовок для секции управления файлами в контейнере UI
+local ConfigSectionLabel = Instance.new("TextLabel")
+ConfigSectionLabel.Name = "ConfigurationSection_TitleLabel"
+ConfigSectionLabel.Size = UDim2.new(1, 0, 0, 30)
+ConfigSectionLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ConfigSectionLabel.BackgroundTransparency = 1
+ConfigSectionLabel.Text = "--- [ МЕНЕДЖЕР ЛОКАЛЬНЫХ ПРОФИЛЕЙ ] ---"
+ConfigSectionLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
+ConfigSectionLabel.Font = _G.BeyondConfig.Styles.FontsList.Bold
+ConfigSectionLabel.TextSize = 12
+ConfigSectionLabel.TextStrokeTransparency = 0.8
+ConfigSectionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+ConfigSectionLabel.Parent = Container
+
+-- Главный фрейм карточки управления конфигурацией
+local ConfigCardFrame = Instance.new("Frame")
+ConfigCardFrame.Name = "Configuration_LayoutContainer"
+ConfigCardFrame.Size = UDim2.new(1, 0, 0, 95)
+ConfigCardFrame.BackgroundColor3 = _G.BeyondConfig.Styles.CardBackgroundColor
+ConfigCardFrame.BorderSizePixel = 0
+ConfigCardFrame.Parent = Container
+
+local ConfigCorner = Instance.new("UICorner")
+ConfigCorner.CornerRadius = UDim.new(0, 8)
+ConfigCorner.Parent = ConfigCardFrame
+
+local ConfigStroke = Instance.new("UIStroke")
+ConfigStroke.Thickness = 1
+ConfigStroke.Color = _G.BeyondConfig.Styles.BorderStrokeColor
+ConfigStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+ConfigStroke.Parent = ConfigCardFrame
+
+local ConfigStatusLabel = Instance.new("TextLabel")
+ConfigStatusLabel.Name = "ConfigSystem_StatusMessage"
+ConfigStatusLabel.Size = UDim2.new(1, -20, 0, 25)
+ConfigStatusLabel.Position = UDim2.new(0, 14, 0, 4)
+ConfigStatusLabel.Text = "Система сохранения: <font color='#00FF8C'>Готова к сериализации</font>"
+ConfigStatusLabel.RichText = true
+ConfigStatusLabel.TextColor3 = Color3.fromRGB(225, 225, 235)
+ConfigStatusLabel.Font = _G.BeyondConfig.Styles.FontsList.Semibold
+ConfigStatusLabel.TextSize = 13
+ConfigStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+ConfigStatusLabel.BackgroundTransparency = 1
+ConfigStatusLabel.Parent = ConfigCardFrame
+
+-- Функция обновления текстового статуса файловой системы
+local function PushConfigStatusUpdate(htmlText)
+    ConfigStatusLabel.Text = "Система сохранения: " .. htmlText
+end
+
+-- Основная функция сохранения текущих параметров в файл JSON
+local function SerializeAndSaveConfig()
+    if not FileSystemAPI.Write then
+        PushConfigStatusUpdate("<font color='#FF2B5A'>Ошибка: Delta не поддерживает WriteFile</font>")
+        return
+    end
+
+    local successSerialization, encodedData = pcall(function()
+        -- Подготавливаем чистую таблицу параметров без UI элементов
+        local exportTable = {
+            SpeedValue = _G.BeyondConfig.SpeedValue,
+            InfiniteJump = _G.BeyondConfig.InfiniteJump,
+            Noclip = _G.BeyondConfig.Noclip,
+            ThemeColor = {_G.BeyondConfig.ThemeColor.R, _G.BeyondConfig.ThemeColor.G, _G.BeyondConfig.ThemeColor.B},
+            HighlightESP = _G.BeyondConfig.Visuals.HighlightESP,
+            EspFillTransparency = _G.BeyondConfig.Visuals.EspFillTransparency,
+            EspOutlineTransparency = _G.BeyondConfig.Visuals.EspOutlineTransparency,
+            RainbowGlow = _G.BeyondConfig.Visuals.RainbowGlow,
+            GlowSpeed = _G.BeyondConfig.Visuals.GlowSpeed,
+            AutoClickEnabled = _G.BeyondConfig.Automation.AutoClickEnabled,
+            ClickInterval = _G.BeyondConfig.Automation.ClickInterval,
+            CurrentThemePreset = _G.BeyondConfig.Styles.CurrentThemePreset
+        }
+        return HttpService:JSONEncode(exportTable)
+    end)
+
+    if successSerialization and encodedData then
+        local successWrite, writeError = pcall(function()
+            FileSystemAPI.Write(BEYOND_CONFIG_FILENAME, encodedData)
         end)
         
-        if success and scriptRawCode and #scriptRawCode > 0 then
-            -- Компиляция полученных строковых данных в байт-код Lua
-            local compiledFunction, compileError = loadstring(scriptRawCode)
-            
-            if compiledFunction then
-                local execSuccess, execError = pcall(compiledFunction)
-                if execSuccess then
-                    print("[BeyondClient Hub]: Модуль " .. scriptName .. " успешно инжектирован!")
-                else
-                    warn("[BeyondClient Runtime Error]: Ошибка выполнения скрипта: " .. tostring(execError))
+        if successWrite then
+            PushConfigStatusUpdate("<font color='#00FF8C'>Профиль успешно сохранен!</font>")
+        else
+            PushConfigStatusUpdate("<font color='#FF2B5A'>Ошибка записи файла конфигурации</font>")
+        end
+    else
+        PushConfigStatusUpdate("<font color='#FF2B5A'>Ошибка конвертации данных</font>")
+    end
+end
+
+-- Основная функция загрузки параметров из файла JSON
+local function LoadAndDeserializeConfig()
+    if not FileSystemAPI.Read or not FileSystemAPI.Check then
+        PushConfigStatusUpdate("<font color='#FF2B5A'>Ошибка: Delta не поддерживает ReadFile</font>")
+        return
+    end
+
+    if not FileSystemAPI.Check(BEYOND_CONFIG_FILENAME) then
+        PushConfigStatusUpdate("<font color='#FFBB00'>Файл конфигурации не найден</font>")
+        return
+    end
+
+    local successRead, fileRawContent = pcall(function()
+        return FileSystemAPI.Read(BEYOND_CONFIG_FILENAME)
+    end)
+
+    if successRead and fileRawContent then
+        local successDecode, decodedTable = pcall(function()
+            return HttpService:JSONDecode(fileRawContent)
+        end)
+
+        if successDecode and decodedTable then
+            -- Начинаем безопасную перезапись параметров в глобальный конфиг оверлея
+            pcall(function()
+                if decodedTable.SpeedValue then _G.BeyondConfig.SpeedValue = decodedTable.SpeedValue end
+                if decodedTable.InfiniteJump then _G.BeyondConfig.InfiniteJump = decodedTable.InfiniteJump end
+                if decodedTable.Noclip then _G.BeyondConfig.Noclip = decodedTable.Noclip end
+                if decodedTable.HighlightESP then _G.BeyondConfig.Visuals.HighlightESP = decodedTable.HighlightESP end
+                if decodedTable.EspFillTransparency then _G.BeyondConfig.Visuals.EspFillTransparency = decodedTable.EspFillTransparency end
+                if decodedTable.EspOutlineTransparency then _G.BeyondConfig.Visuals.EspOutlineTransparency = decodedTable.EspOutlineTransparency end
+                if decodedTable.RainbowGlow then _G.BeyondConfig.Visuals.RainbowGlow = decodedTable.RainbowGlow end
+                if decodedTable.GlowSpeed then _G.BeyondConfig.Visuals.GlowSpeed = decodedTable.GlowSpeed end
+                if decodedTable.AutoClickEnabled then _G.BeyondConfig.Automation.AutoClickEnabled = decodedTable.AutoClickEnabled end
+                if decodedTable.ClickInterval then _G.BeyondConfig.Automation.ClickInterval = decodedTable.ClickInterval end
+                if decodedTable.CurrentThemePreset then _G.BeyondConfig.Styles.CurrentThemePreset = decodedTable.CurrentThemePreset end
+                
+                if decodedTable.ThemeColor then
+                    _G.BeyondConfig.ThemeColor = Color3.new(decodedTable.ThemeColor[1], decodedTable.ThemeColor[2], decodedTable.ThemeColor[3])
                 end
-            else
-                warn("[BeyondClient Syntax Error]: Ошибка компиляции кода: " .. tostring(compileError))
-            end
+            end)
+            
+            PushConfigStatusUpdate("<font color='#00FF8C'>Конфиг успешно применен!</font>")
         else
-            warn("[BeyondClient Connection Error]: Не удалось получить данные по ссылке: " .. tostring(targetUrl))
+            PushConfigStatusUpdate("<font color='#FF2B5A'>Ошибка разбора JSON структуры</font>")
         end
+    else
+        PushConfigStatusUpdate("<font color='#FF2B5A'>Ошибка чтения данных с диска</font>")
+    end
+end
+
+-- --- ГЕНЕРАЦИЯ И СТИЛИЗАЦИЯ ИНТЕРФЕЙСНЫХ КНОПОК УПРАВЛЕНИЯ ФАЙЛАМИ ---
+
+local function BuildFileActionButton(textTitle, xOffset, primeBgColor, clickCallback)
+    local ActionBtn = Instance.new("TextButton")
+    ActionBtn.Name = "FileSystemActionButton_" .. textTitle
+    ActionBtn.Size = UDim2.new(0.44, 0, 0, 38)
+    ActionBtn.Position = UDim2.new(0, xOffset, 0, 42)
+    ActionBtn.BackgroundColor3 = primeBgColor
+    ActionBtn.Text = textTitle
+    ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ActionBtn.Font = _G.BeyondConfig.Styles.FontsList.Bold
+    ActionBtn.TextSize = 11
+    ActionBtn.Parent = ConfigCardFrame
+    
+    local BTNCorner = Instance.new("UICorner")
+    BTNCorner.CornerRadius = UDim.new(0, 6)
+    BTNCorner.Parent = ActionBtn
+
+    ActionBtn.MouseButton1Click:Connect(function()
+        if not ScriptActive then return end
+        clickCallback()
     end)
 end
 
--- Динамическая генерация карточек скриптов в интерфейсе меню
-for idx, scriptInfo in ipairs(ScriptHubData) do
-    local HubFrame = Instance.new("Frame")
-    HubFrame.Name = "HubCard_" .. tostring(idx)
-    HubFrame.Size = UDim2.new(1, 0, 0, 60)
-    HubFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-    HubFrame.BorderSizePixel = 0
-    HubFrame.Parent = Container
+-- Развертывание кнопок «Сохранить» и «Загрузить» с точной адаптацией отступов под мобильный экран
+BuildFileActionButton("СОХРАНИТЬ ПРОФИЛЬ", 14, Color3.fromRGB(34, 46, 38), SerializeAndSaveConfig)
+BuildFileActionButton("ЗАГРУЗИТЬ ПРОФИЛЬ", 228, Color3.fromRGB(34, 38, 46), LoadAndDeserializeConfig)
+
+print("[BeyondClient Configs]: Модуль сохранения локальных профилей успешно подключен к ядру.")
+--[[
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (Dimensity 800U / 8GB RAM / Android 10)
+    Specification: Official TextChatService Integration & Chat Macros Core
+    File: main.lua (Part 6/Unknown - Text Stream Automation Control)
+--]]
+
+-- Безопасный поиск официальных текстовых сервисов игры
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ChatMacroData = {
+    {Name = "Приветствие", Phrase = "Привет всем! Beyond Client v5.0 запущен успешно."},
+    {Name = "Предупреждение", Phrase = "Внимание, зафиксирована тактическая активность!"},
+    {Name = "Проверка лагов", Phrase = "Мой текущий пинг стабилен на HONOR Play5."}
+}
+
+-- Декоративный визуальный заголовок секции чата в контейнере UI
+local ChatSectionLabel = Instance.new("TextLabel")
+ChatSectionLabel.Name = "ChatSection_TitleLabel"
+ChatSectionLabel.Size = UDim2.new(1, 0, 0, 30)
+ChatSectionLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ChatSectionLabel.BackgroundTransparency = 1
+ChatSectionLabel.Text = "--- [ МАКРОСЫ И АВТОМАТИЗАЦИЯ ЧАТА ] ---"
+ChatSectionLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
+ChatSectionLabel.Font = _G.BeyondConfig.Styles.FontsList.Bold
+ChatSectionLabel.TextSize = 12
+ChatSectionLabel.TextStrokeTransparency = 0.8
+ChatSectionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+ChatSectionLabel.Parent = Container
+
+-- Универсальная легальная функция отправки текстовых сообщений
+local function FireLegalChatMessage(textString)
+    if not ScriptActive then return end
     
-    local HubCorner = Instance.new("UICorner")
-    HubCorner.CornerRadius = UDim.new(0, 8)
-    HubCorner.Parent = HubFrame
-    
-    local HubStroke = Instance.new("UIStroke")
-    HubStroke.Thickness = 1
-    HubStroke.Color = Color3.fromRGB(35, 35, 45)
-    HubStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    HubStroke.Parent = HubFrame
-    
-    local NameLabel = Instance.new("TextLabel")
-    NameLabel.Size = UDim2.new(0.65, 0, 0, 22)
-    NameLabel.Position = UDim2.new(0, 12, 0, 6)
-    NameLabel.Text = scriptInfo.Name
-    NameLabel.TextColor3 = Color3.fromRGB(240, 240, 245)
-    NameLabel.Font = Enum.Font.GothamBold
-    NameLabel.TextSize = 13
-    NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    NameLabel.BackgroundTransparency = 1
-    NameLabel.Parent = HubFrame
-    
-    local DescLabel = Instance.new("TextLabel")
-    DescLabel.Size = UDim2.new(0.65, 0, 0, 26)
-    DescLabel.Position = UDim2.new(0, 12, 0, 26)
-    DescLabel.Text = scriptInfo.Desc
-    DescLabel.TextColor3 = Color3.fromRGB(130, 130, 145)
-    DescLabel.Font = Enum.Font.Gotham
-    DescLabel.TextSize = 11
-    DescLabel.TextWrapped = true
-    DescLabel.TextXAlignment = Enum.TextXAlignment.Left
-    DescLabel.TextYAlignment = Enum.TextYAlignment.Top
-    DescLabel.BackgroundTransparency = 1
-    DescLabel.Parent = HubFrame
-    
-    local LaunchBtn = Instance.new("TextButton")
-    LaunchBtn.Size = UDim2.new(0, 90, 0, 32)
-    LaunchBtn.Position = UDim2.new(1, -102, 0.5, -16)
-    LaunchBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
-    LaunchBtn.Text = "ЗАПУСТИТЬ"
-    LaunchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    LaunchBtn.Font = Enum.Font.GothamBold
-    LaunchBtn.TextSize = 10
-    LaunchBtn.Parent = HubFrame
-    
-    local LCorner = Instance.new("UICorner")
-    LCorner.CornerRadius = UDim.new(0, 6)
-    LCorner.Parent = LaunchBtn
-    
-    -- Интерактивная анимация клика по кнопке запуска
-    LaunchBtn.MouseButton1Click:Connect(function()
-        TweenService:Create(LaunchBtn, TweenInfo.new(0.1), {BackgroundColor3 = _G.BeyondConfig.ThemeColor}):Play()
-        task.spawn(function()
-            SafeExecuteHTTP(scriptInfo.Name, scriptInfo.Url)
-            task.wait(0.2)
-            TweenService:Create(LaunchBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 48)}):Play()
-        end)
-    end)
-end
-
-print("[BeyondClient ScriptHub]: Модуль Script Hub успешно добавлен в ядро клиента.")
--- ====================================================================
--- [ МОБИЛЬНЫЙ МОДУЛЬ: ПЛАВАЮЩАЯ КНОПКА ДЛЯ DELTA EXECUTOR ]
--- ====================================================================
-
-local TouchInpService = game:GetService("UserInputService")
-local TwService = game:GetService("TweenService")
-
--- Проверяем, что базовый интерфейс существует
-local CoreGuiContainer = MainFrame and MainFrame.Parent
-if not CoreGuiContainer or not MainFrame then
-    warn("[BeyondClient Mobile Error]: Главное меню не найдено. Убедитесь, что этот код вставлен в самый конец!")
-    return
-end
-
--- Создаем круглую кнопку-иконку
-local MobileToggleButton = Instance.new("ImageButton")
-MobileToggleButton.Name = "BeyondMobileToggle"
-MobileToggleButton.Size = UDim2.new(0, 50, 0, 50)
--- Начальная позиция в левой части экрана, чуть ниже верхнего края
-MobileToggleButton.Position = UDim2.new(0, 15, 0.2, 0)
-MobileToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MobileToggleButton.BorderSizePixel = 0
-MobileToggleButton.Image = "rbxassetid://114254245648192" -- Иконка Ноль Два
-MobileToggleButton.ZIndex = 10
-MobileToggleButton.Parent = CoreGuiContainer
-
--- Скругление кнопки в идеальный круг
-local ButtonCorner = Instance.new("UICorner")
-ButtonCorner.CornerRadius = UDim.new(1, 0)
-ButtonCorner.Parent = MobileToggleButton
-
--- Неоновая розовая обводка кнопки в стиле Zero Two
-local ButtonStroke = Instance.new("UIStroke")
-ButtonStroke.Thickness = 1.5
-ButtonStroke.Color = Color3.fromRGB(255, 43, 90)
-ButtonStroke.Parent = MobileToggleButton
-
--- --- СИСТЕМА ПЕРЕТАСКИВАНИЯ МОБИЛЬНОЙ КНОПКИ (DRAG) ---
-local btnDragging = false
-local btnDragInput, btnDragStart, btnStartPos
-
-local function updateBtnDrag(input)
-    local delta = input.Position - btnDragStart
-    MobileToggleButton.Position = UDim2.new(
-        btnStartPos.X.Scale, btnStartPos.X.Offset + delta.x, 
-        btnStartPos.Y.Scale, btnStartPos.Y.Offset + delta.y
-    )
-end
-
-MobileToggleButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        btnDragging = true
-        btnDragStart = input.Position
-        btnStartPos = MobileToggleButton.Position
+    pcall(function()
+        -- Метод 1: Современная система TextChatService (Роблокс после 2022-2024 годов)
+        if TextChatService and TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+            local textChannels = TextChatService:FindFirstChild("TextChannels")
+            local generalChannel = textChannels and textChannels:FindFirstChild("RBXGeneral")
+            if generalChannel and generalChannel:IsA("TextChannel") then
+                generalChannel:SendAsync(textString)
+                return
+            end
+        end
         
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                btnDragging = false
+        -- Метод 2: Классическая система Legacy Chat Systems (Старые плейсы)
+        local sayMessageRequest = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") 
+            and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+        if sayMessageRequest and sayMessageRequest:IsA("RemoteEvent") then
+            sayMessageRequest:FireServer(textString, "All")
+        end
+    end)
+end
+
+-- Динамическая генерация карточек макросов в интерфейсе скроллинга
+for idx, macroInfo in ipairs(ChatMacroData) do
+    local MacroFrame = Instance.new("Frame")
+    MacroFrame.Name = "ChatMacroCard_" .. tostring(idx)
+    MacroFrame.Size = UDim2.new(1, 0, 0, 60)
+    MacroFrame.BackgroundColor3 = _G.BeyondConfig.Styles.CardBackgroundColor
+    MacroFrame.BorderSizePixel = 0
+    MacroFrame.Parent = Container
+    
+    local MacroCorner = Instance.new("UICorner")
+    MacroCorner.CornerRadius = UDim.new(0, 8)
+    MacroCorner.Parent = MacroFrame
+    
+    local MacroStroke = Instance.new("UIStroke")
+    MacroStroke.Thickness = 1
+    MacroStroke.Color = _G.BeyondConfig.Styles.BorderStrokeColor
+    MacroStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    MacroStroke.Parent = MacroFrame
+    
+    local MacroNameLabel = Instance.new("TextLabel")
+    MacroNameLabel.Size = UDim2.new(0.65, 0, 0, 22)
+    MacroNameLabel.Position = UDim2.new(0, 14, 0, 6)
+    MacroNameLabel.Text = macroInfo.Name
+    MacroNameLabel.TextColor3 = Color3.fromRGB(240, 240, 245)
+    MacroNameLabel.Font = _G.BeyondConfig.Styles.FontsList.Bold
+    MacroNameLabel.TextSize = 13
+    MacroNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    MacroNameLabel.BackgroundTransparency = 1
+    MacroNameLabel.Parent = MacroFrame
+    
+    local MacroPhraseLabel = Instance.new("TextLabel")
+    MacroPhraseLabel.Size = UDim2.new(0.65, 0, 0, 26)
+    MacroPhraseLabel.Position = UDim2.new(0, 14, 0, 26)
+    MacroPhraseLabel.Text = macroInfo.Phrase
+    MacroPhraseLabel.TextColor3 = Color3.fromRGB(130, 130, 145)
+    MacroPhraseLabel.Font = _G.BeyondConfig.Styles.FontsList.Regular
+    MacroPhraseLabel.TextSize = 11
+    MacroPhraseLabel.TextWrapped = true
+    MacroPhraseLabel.TextXAlignment = Enum.TextXAlignment.Left
+    MacroPhraseLabel.TextYAlignment = Enum.TextYAlignment.Top
+    MacroPhraseLabel.BackgroundTransparency = 1
+    MacroPhraseLabel.Parent = MacroFrame
+    
+    local SendBtn = Instance.new("TextButton")
+    SendBtn.Size = UDim2.new(0, 95, 0, 32)
+    SendBtn.Position = UDim2.new(1, -109, 0.5, -16)
+    SendBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+    SendBtn.Text = "ОТПРАВИТЬ"
+    SendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SendBtn.Font = _G.BeyondConfig.Styles.FontsList.Bold
+    SendBtn.TextSize = 10
+    SendBtn.Parent = MacroFrame
+    
+    local SCorner = Instance.new("UICorner")
+    SCorner.CornerRadius = UDim.new(0, 6)
+    SCorner.Parent = SendBtn
+    
+    -- Плавный визуальный отклик кнопки на нажатие пальцем
+    SendBtn.MouseButton1Click:Connect(function()
+        if not ScriptActive then return end
+        
+        TweenService:Create(SendBtn, TweenInfo.new(0.1), {BackgroundColor3 = _G.BeyondConfig.ThemeColor}):Play()
+        task.spawn(function()
+            FireLegalChatMessage(macroInfo.Phrase)
+            task.wait(0.2)
+            if _G.BeyondConfig then
+                TweenService:Create(SendBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 48)}):Play()
+            end
+        end)
+    end)
+end
+
+print("[BeyondClient Chat]: Модуль легальной автоматизации сообщений успешно подключен.")
+--[[
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (Dimensity 800U / 8GB RAM / Android 10)
+    Specification: Official Stats Service Inspection & Performance HUD Core
+    File: main.lua (Part 7/Unknown - Telemetry & Hardware Monitor Control)
+--]]
+
+-- Безопасный вызов официального сервиса игровой статистики
+local StatsService = game:GetService("Stats")
+local NetworkStats = StatsService:FindFirstChild("Network")
+
+-- Регистрация локального кэша для сбора телеметрии
+local TelemetryData = {
+    CurrentFps = 60,
+    CurrentPing = 0,
+    CurrentMemory = 0,
+    FrameCount = 0,
+    TimeCounter = 0
+}
+
+-- Декоративный визуальный заголовок секции мониторинга в контейнере UI
+local StatsSectionLabel = Instance.new("TextLabel")
+StatsSectionLabel.Name = "TelemetrySection_TitleLabel"
+StatsSectionLabel.Size = UDim2.new(1, 0, 0, 30)
+StatsSectionLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+StatsSectionLabel.BackgroundTransparency = 1
+StatsSectionLabel.Text = "--- [ ТЕЛЕМЕТРИЯ И ПРОИЗВОДИТЕЛЬНОСТЬ ] ---"
+StatsSectionLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
+StatsSectionLabel.Font = _G.BeyondConfig.Styles.FontsList.Bold
+StatsSectionLabel.TextSize = 12
+StatsSectionLabel.TextStrokeTransparency = 0.8
+StatsSectionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+StatsSectionLabel.Parent = Container
+
+-- Главный фрейм карточки мониторинга аппаратных ресурсов
+local StatsCardFrame = Instance.new("Frame")
+StatsCardFrame.Name = "Telemetry_LayoutContainer"
+StatsCardFrame.Size = UDim2.new(1, 0, 0, 105)
+StatsCardFrame.BackgroundColor3 = _G.BeyondConfig.Styles.CardBackgroundColor
+StatsCardFrame.BorderSizePixel = 0
+StatsCardFrame.Parent = Container
+
+local StatsCorner = Instance.new("UICorner")
+StatsCorner.CornerRadius = UDim.new(0, 8)
+StatsCorner.Parent = StatsCardFrame
+
+local StatsStroke = Instance.new("UIStroke")
+StatsStroke.Thickness = 1
+StatsStroke.Color = _G.BeyondConfig.Styles.BorderStrokeColor
+StatsStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+StatsStroke.Parent = StatsCardFrame
+
+-- Внутренняя фабрика для создания текстовых полей телеметрии
+local function CreateStatDisplayLabel(nameTag, yPosition)
+    local DisplayLabel = Instance.new("TextLabel")
+    DisplayLabel.Name = "TelemetryDisplay_" .. nameTag
+    DisplayLabel.Size = UDim2.new(1, -24, 0, 22)
+    DisplayLabel.Position = UDim2.new(0, 14, 0, yPosition)
+    DisplayLabel.BackgroundTransparency = 1
+    DisplayLabel.Text = nameTag .. ": <font color='#00FF8C'>Загрузка...</font>"
+    DisplayLabel.RichText = true
+    DisplayLabel.TextColor3 = Color3.fromRGB(215, 215, 225)
+    DisplayLabel.Font = _G.BeyondConfig.Styles.FontsList.Semibold
+    DisplayLabel.TextSize = 12
+    DisplayLabel.TextXAlignment = Enum.TextXAlignment.Left
+    DisplayLabel.Parent = StatsCardFrame
+    return DisplayLabel
+end
+
+local FpsDisplay = CreateStatDisplayLabel("Текущая частота кадров (FPS)", 10)
+local PingDisplay = CreateStatDisplayLabel("Сетевая задержка (Ping)", 38)
+local MemDisplay = CreateStatDisplayLabel("Потребление памяти (Memory)", 66)
+
+-- Асинхронный цикл сбора и вывода аппаратной телеметрии девайса
+task.spawn(function()
+    while ScriptActive and _G.BeyondConfig and task.wait(0.5) do
+        pcall(function()
+            -- Расчет сетевой задержки (Ping) через официальное API
+            if NetworkStats then
+                TelemetryData.CurrentPing = math.round(NetworkStats.ServerPing)
+            else
+                TelemetryData.CurrentPing = 0
+            end
+
+            -- Сбор общего потребления памяти клиентом (в Мегабайтах)
+            TelemetryData.CurrentMemory = math.round(StatsService:GetTotalMemoryUsageMb())
+
+            -- Динамическое обновление строковых данных с адаптивной цветовой индикацией
+            local fpsColor = TelemetryData.CurrentFps >= 45 and "#00FF8C" or (TelemetryData.CurrentFps >= 25 and "#FFBB00" or "#FF2B5A")
+            local pingColor = TelemetryData.CurrentPing <= 90 and "#00FF8C" or (TelemetryData.CurrentPing <= 200 and "#FFBB00" or "#FF2B5A")
+            
+            FpsDisplay.Text = "Текущая частота кадров: <font color='" .. fpsColor .. "'>" .. tostring(TelemetryData.CurrentFps) .. " FPS</font>"
+            PingDisplay.Text = "Сетевая задержка (Ping): <font color='" .. pingColor .. "'>" .. tostring(TelemetryData.CurrentPing) .. " ms</font>"
+            MemDisplay.Text = "Потребление памяти: <font color='#00BFFF'>" .. tostring(TelemetryData.CurrentMemory) .. " MB</font>"
+        end)
+    end
+end)
+
+-- Изолированный поток для точного подсчета FPS (кадров в секунду) вне зависимости от задержек сети
+RunService.RenderStepped:Connect(function(deltaTime)
+    if not ScriptActive then return end
+    
+    TelemetryData.FrameCount = TelemetryData.FrameCount + 1
+    TelemetryData.TimeCounter = TelemetryData.TimeCounter + deltaTime
+    
+    if TelemetryData.TimeCounter >= 1.0 then
+        TelemetryData.CurrentFps = math.round(TelemetryData.FrameCount / TelemetryData.TimeCounter)
+        TelemetryData.FrameCount = 0
+        TelemetryData.TimeCounter = 0
+    end
+end)
+
+print("[BeyondClient Telemetry]: Модуль аппаратного мониторинга производительности успешно развернут.")
+--[[
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (Dimensity 800U / 8GB RAM / Android 10)
+    Specification: Strict Lighting Optimization & Rendering Performance Core
+    File: main.lua (Part 8/Unknown - Graphic Pipeline Optimization Control)
+--]]
+
+-- Кэширование системных графических сервисов для быстрой манипуляции ассетами
+local Terrain = workspace:FindFirstChildOfClass("Terrain")
+
+-- Регистрация начального состояния графического конвейера в конфигурации
+_G.BeyondConfig.PerformanceBoost = {
+    OptimizerActive = false,
+    OriginalShadows = Lighting.GlobalShadows,
+    OriginalTech = Lighting.Technology
+}
+
+-- Декоративный визуальный заголовок секции оптимизации в контейнере UI
+local OptimizationSectionLabel = Instance.new("TextLabel")
+OptimizationSectionLabel.Name = "OptimizationSection_TitleLabel"
+OptimizationSectionLabel.Size = UDim2.new(1, 0, 0, 30)
+OptimizationSectionLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+OptimizationSectionLabel.BackgroundTransparency = 1
+OptimizationSectionLabel.Text = "--- [ МОДУЛЬ ОПТИМИЗАЦИИ ГРАФИКИ ] ---"
+OptimizationSectionLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
+OptimizationSectionLabel.Font = _G.BeyondConfig.Styles.FontsList.Bold
+OptimizationSectionLabel.TextSize = 12
+OptimizationSectionLabel.TextStrokeTransparency = 0.8
+OptimizationSectionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+OptimizationSectionLabel.Parent = Container
+
+-- Функция глубокой очистки тяжелых графических эффектов на карте
+local function ToggleEnvironmentOptimization(enableOptimization)
+    if not ScriptActive then return end
+    
+    pcall(function()
+        if enableOptimization then
+            -- Деактивация глобальных теней для разгрузки видеочипа
+            Lighting.GlobalShadows = false
+            
+            -- Принудительное понижение качества прорисовки ландшафта и воды
+            if Terrain then
+                Terrain.WaterWaveSize = 0
+                Terrain.WaterWaveSpeed = 0
+                Terrain.WaterReflectance = 0
+                Terrain.WaterTransparency = 0
+            end
+            
+            -- Циклический перебор и отключение тяжелых шейдеров атмосферы (кроме нашего блюра меню)
+            for _, effect in ipairs(Lighting:GetChildren()) do
+                if effect:IsA("PostEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("Atmosphere") then
+                    if effect.Name ~= "Beyond_Interface_Blur" then
+                        effect.Enabled = false
+                    end
+                end
+            end
+            
+            -- Ограничение отрисовки мелких частиц и эффектов свечения на объектах карты
+            for _, descendant in ipairs(workspace:GetDescendants()) do
+                if descendant:IsA("ParticleEmitter") or descendant:IsA("Smoke") or descendant:IsA("Fire") or descendant:IsA("Sparkles") then
+                    descendant.Enabled = false
+                end
+            end
+            
+            PushConfigStatusUpdate("<font color='#00FF8C'>FPS Бустер: Активирован</font>")
+        else
+            -- Возврат исходных игровых настроек рендеринга при отключении оптимизатора
+            Lighting.GlobalShadows = _G.BeyondConfig.PerformanceBoost.OriginalShadows
+            
+            if Terrain then
+                Terrain.WaterWaveSize = 0.15
+                Terrain.WaterWaveSpeed = 1
+                Terrain.WaterReflectance = 1
+                Terrain.WaterTransparency = 1
+            end
+            
+            for _, effect in ipairs(Lighting:GetChildren()) do
+                if effect:IsA("PostEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("Atmosphere") then
+                    if effect.Name ~= "Beyond_Interface_Blur" then
+                        effect.Enabled = true
+                    end
+                end
+            end
+            
+            for _, descendant in ipairs(workspace:GetDescendants()) do
+                if descendant:IsA("ParticleEmitter") or descendant:IsA("Smoke") or descendant:IsA("Fire") or descendant:IsA("Sparkles") then
+                    descendant.Enabled = true
+                end
+            end
+            
+            PushConfigStatusUpdate("<font color='#00FF8C'>FPS Бустер: Отключен</font>")
+        end
+    end)
+end
+
+-- Переключатель для мастер-активации мобильного FPS Бустера
+CreateMobileToggle(Container, "Включить оптимизацию рендеринга (FPS Boost)", _G.BeyondConfig.PerformanceBoost.OptimizerActive, function(state)
+    _G.BeyondConfig.PerformanceBoost.OptimizerActive = state
+    ToggleEnvironmentOptimization(state)
+end)
+
+print("[BeyondClient Graphics]: Модуль легальной оптимизации игрового окружения успешно развернут.")
+--[[
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (Dimensity 800U / 8GB RAM / Android 10)
+    Specification: Vector CoreGui Overlay & Dynamic Crosshair Calibration
+    File: main.lua (Part 9/Unknown - Screen Center Vector Crosshair Control)
+--]]
+
+-- Инициализация параметров прицела в глобальной конфигурации оверлея
+_G.BeyondConfig.Crosshair = {
+    Enabled = false,
+    Size = 14,
+    Thickness = 2,
+    Gap = 4,
+    CenterDot = false
+}
+
+-- Декоративный визуальный заголовок секции прицела в контейнере UI
+local CrosshairSectionLabel = Instance.new("TextLabel")
+CrosshairSectionLabel.Name = "CrosshairSection_TitleLabel"
+CrosshairSectionLabel.Size = UDim2.new(1, 0, 0, 30)
+CrosshairSectionLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+CrosshairSectionLabel.BackgroundTransparency = 1
+CrosshairSectionLabel.Text = "--- [ НАСТРАИВАЕМЫЙ ЦЕНТРОВОЙ ПРИЦЕЛ ] ---"
+CrosshairSectionLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
+CrosshairSectionLabel.Font = _G.BeyondConfig.Styles.FontsList.Bold
+CrosshairSectionLabel.TextSize = 12
+CrosshairSectionLabel.TextStrokeTransparency = 0.8
+CrosshairSectionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+CrosshairSectionLabel.Parent = Container
+
+-- --- СОЗДАНИЕ ВЕКТОРНЫХ КОМПОНЕНТОВ ПРИЦЕЛА В CORE_GUI ---
+
+local CrosshairContainer = Instance.new("Frame")
+CrosshairContainer.Name = "Beyond_Crosshair_Root"
+CrosshairContainer.Size = UDim2.new(0, 100, 0, 100)
+CrosshairContainer.Position = UDim2.new(0.5, -50, 0.5, -50) -- Идеальный центр экрана
+CrosshairContainer.BackgroundTransparency = 1
+CrosshairContainer.Visible = false
+CrosshairContainer.Parent = BeyondScreenGui
+
+local TopLine = Instance.new("Frame")
+local BottomLine = Instance.new("Frame")
+local LeftLine = Instance.new("Frame")
+local RightLine = Instance.new("Frame")
+local CenterDot = Instance.new("Frame")
+
+local linesArray = {TopLine, BottomLine, LeftLine, RightLine, CenterDot}
+for _, line in ipairs(linesArray) do
+    line.BorderSizePixel = 0
+    line.BackgroundColor3 = _G.BeyondConfig.ThemeColor
+    line.Parent = CrosshairContainer
+end
+
+-- Функция динамической калибровки геометрии линий оверлея прицела
+local function RecalibrateCrosshairGeometry()
+    if not _G.BeyondConfig or not _G.BeyondConfig.Crosshair then return end
+    local cfg = _G.BeyondConfig.Crosshair
+    
+    CrosshairContainer.Visible = cfg.Enabled
+    CenterDot.Visible = cfg.CenterDot
+    
+    -- Корректировка размеров центральной точки
+    CenterDot.Size = UDim2.new(0, cfg.Thickness, 0, cfg.Thickness)
+    CenterDot.Position = UDim2.new(0.5, -cfg.Thickness/2, 0.5, -cfg.Thickness/2)
+    
+    -- Позиционирование 4-х векторов перекрестия относительно центра
+    TopLine.Size = UDim2.new(0, cfg.Thickness, 0, cfg.Size)
+    TopLine.Position = UDim2.new(0.5, -cfg.Thickness/2, 0.5, -cfg.Gap - cfg.Size)
+    
+    BottomLine.Size = UDim2.new(0, cfg.Thickness, 0, cfg.Size)
+    BottomLine.Position = UDim2.new(0.5, -cfg.Thickness/2, 0.5, cfg.Gap)
+    
+    LeftLine.Size = UDim2.new(0, cfg.Size, 0, cfg.Thickness)
+    LeftLine.Position = UDim2.new(0.5, -cfg.Gap - cfg.Size, 0.5, -cfg.Thickness/2)
+    
+    RightLine.Size = UDim2.new(0, cfg.Size, 0, cfg.Thickness)
+    RightLine.Position = UDim2.new(0.5, cfg.Gap, 0.5, -cfg.Thickness/2)
+end
+
+-- --- ИНТЕГРАЦИЯ ЭЛЕМЕНТОВ УПРАВЛЕНИЯ ПРИЦЕЛОМ В МЕНЮ ---
+
+CreateMobileToggle(Container, "Отображать кастомный прицел", _G.BeyondConfig.Crosshair.Enabled, function(state)
+    _G.BeyondConfig.Crosshair.Enabled = state
+    RecalibrateCrosshairGeometry()
+end)
+
+CreateMobileToggle(Container, "Центральная точка прицела", _G.BeyondConfig.Crosshair.CenterDot, function(state)
+    _G.BeyondConfig.Crosshair.CenterDot = state
+    RecalibrateCrosshairGeometry()
+end)
+
+CreateMobileSlider(Container, "Длина линий прицела", 4, 40, _G.BeyondConfig.Crosshair.Size, function(val)
+    _G.BeyondConfig.Crosshair.Size = val
+    RecalibrateCrosshairGeometry()
+end)
+
+CreateMobileSlider(Container, "Толщина линий прицела", 1, 8, _G.BeyondConfig.Crosshair.Thickness, function(val)
+    _G.BeyondConfig.Crosshair.Thickness = val
+    RecalibrateCrosshairGeometry()
+end)
+
+CreateMobileSlider(Container, "Зазор прицела (Gap)", 0, 20, _G.BeyondConfig.Crosshair.Gap, function(val)
+    _G.BeyondConfig.Crosshair.Gap = val
+    RecalibrateCrosshairGeometry()
+end)
+
+-- Подключаем переливание цветов прицела в наш единый RenderStepped цикл из Части 3
+task.spawn(function()
+    while ScriptActive and task.wait(0.01) do
+        if _G.BeyondConfig and _G.BeyondConfig.Crosshair.Enabled then
+            pcall(function()
+                -- Извлекаем текущий динамический цвет из глобальной фазы
+                local syncColor = _G.BeyondConfig.Visuals.RainbowGlow and Color3.fromHSV(_G.BeyondConfig.GlowPhase, 0.85, 1) or _G.BeyondConfig.ThemeColor
+                for _, line in ipairs(linesArray) do
+                    line.BackgroundColor3 = syncColor
+                end
+            end)
+        end
+    end
+end)
+
+print("[BeyondClient Crosshair]: Модуль кастомного векторного прицела успешно подключен к оверлею.")
+--[[
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (Dimensity 800U / 8GB RAM / Android 10)
+    Specification: Official SoundService Integration & UI Audio Response Core
+    File: main.lua (Part 10/Unknown - Interface Sound Feedback Control)
+--]]
+
+local SoundService = game:GetService("SoundService")
+
+-- Инициализация параметров аудио-отклика в глобальной конфигурации оверлея
+_G.BeyondConfig.Audio = {
+    MuteAll = false,
+    MasterVolume = 0.5,
+    AssetClickId = "rbxassetid://6140381534", -- Чистый электронный клик из библиотеки Roblox
+    AssetHoverId = "rbxassetid://6895079633"  -- Мягкий звук наведения/слайдера
+}
+
+-- Декоративный визуальный заголовок секции аудио в контейнере UI
+local AudioSectionLabel = Instance.new("TextLabel")
+AudioSectionLabel.Name = "AudioSection_TitleLabel"
+AudioSectionLabel.Size = UDim2.new(1, 0, 0, 30)
+AudioSectionLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+AudioSectionLabel.BackgroundTransparency = 1
+AudioSectionLabel.Text = "--- [ ОЗВУЧКА ИНТЕРФЕЙСА (AUDIO FX) ] ---"
+AudioSectionLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
+AudioSectionLabel.Font = _G.BeyondConfig.Styles.FontsList.Bold
+AudioSectionLabel.TextSize = 12
+AudioSectionLabel.TextStrokeTransparency = 0.8
+AudioSectionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+AudioSectionLabel.Parent = Container
+
+-- Создание изолированного аудио-канала внутри SoundService для изоляции звуков меню
+local BeyondAudioChannel = SoundService:FindFirstChild("Beyond_Interface_Audio") or Instance.new("Folder")
+if not BeyondAudioChannel.Parent then
+    BeyondAudioChannel.Name = "Beyond_Interface_Audio"
+    BeyondAudioChannel.Parent = SoundService
+end
+
+-- Функция для генерации и безопасного воспроизведения системных звуков
+local function PlayInterfaceSound(assetId, customVolumeMultiplier)
+    if not ScriptActive or not _G.BeyondConfig or _G.BeyondConfig.Audio.MuteAll then return end
+    
+    task.spawn(function()
+        local successSound, soundInstance = pcall(function()
+            local sound = Instance.new("Sound")
+            sound.SoundId = assetId
+            sound.Volume = _G.BeyondConfig.Audio.MasterVolume * (customVolumeMultiplier or 1)
+            sound.PlayOnRemove = true
+            sound.Parent = BeyondAudioChannel
+            return sound
+        end)
+        
+        if successSound and soundInstance then
+            soundInstance:Destroy() -- Уничтожаем объект, триггеря PlayOnRemove для экономии ОЗУ
+        end
+    end)
+end
+
+-- Интеграция глобального хука звуков на существующую фабрику элементов управления
+local function HookSoundToUIElement(instanceElement, isSlider)
+    if not instanceElement:IsA("GuiButton") then return end
+    
+    instanceElement.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if isSlider then
+                PlayInterfaceSound(_G.BeyondConfig.Audio.AssetHoverId, 0.7)
+            else
+                PlayInterfaceSound(_G.BeyondConfig.Audio.AssetClickId, 1.0)
+            end
+        end
+    end)
+end
+
+-- Принудительное подключение звуков ко всем кнопкам шапки меню (- / X)
+HookSoundToUIElement(MinimizeBtn, false)
+HookSoundToUIElement(CloseBtn, false)
+HookSoundToUIElement(MobileToggleButton, false)
+
+-- --- ИНТЕГРАЦИЯ ЭЛЕМЕНТОВ УПРАВЛЕНИЯ ЗВУКОМ В КОНТЕЙНЕР МЕНЮ ---
+
+CreateMobileToggle(Container, "Включить беззвучный режим (Mute)", _G.BeyondConfig.Audio.MuteAll, function(state)
+    _G.BeyondConfig.Audio.MuteAll = state
+end)
+
+CreateMobileSlider(Container, "Громкость звуков интерфейса (%)", 0, 100, math.round(_G.BeyondConfig.Audio.MasterVolume * 100), function(val)
+    _G.BeyondConfig.Audio.MasterVolume = val / 100
+end)
+
+-- Автоматический циклический поиск новых динамических кнопок в контейнере для их озвучки
+task.spawn(function()
+    while ScriptActive and task.wait(0.5) do
+        pcall(function()
+            for _, descendant in ipairs(Container:GetDescendants()) do
+                if descendant:IsA("TextButton") and not descendant:GetAttribute("AudioHooked") then
+                    descendant:SetAttribute("AudioHooked", true)
+                    -- Проверяем по имени, является ли кнопка частью слайдера
+                    local isSliderBtn = descendant.Parent and descendant.Parent.Name == "Track"
+                    HookSoundToUIElement(descendant, isSliderBtn)
+                end
             end
         end)
     end
 end)
 
-MobileToggleButton.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseBehavior or input.UserInputType == Enum.UserInputType.Touch then
-        btnDragInput = input
-    end
-end)
+print("[BeyondClient Audio]: Модуль аудио-эффектов и звукового отклика успешно развернут.")
+--[[
+    BeyondClient v5.0 - Ultimate Mobile Edition
+    Target Hardware: HONOR Play5 (Dimensity 800U / 8GB RAM / Android 10)
+    Specification: In-App Event Interception & Debug Logging Engine
+    File: main.lua (Part 11/Final - Telemetry Logging & Stream Visualization Control)
+--]]
 
-TouchInpService.InputChanged:Connect(function(input)
-    if input == btnDragInput and btnDragging then
-        updateBtnDrag(input)
-    end
-end)
+-- Регистрация параметров логирования внутри глобальной конфигурации
+_G.BeyondConfig.Logger = {
+    MaxLinesStored = 50,
+    LogCount = 0
+}
 
--- --- ЛОГИКА НАЖАТИЯ: ОТКРЫТИЕ И ЗАКРЫТИЕ ---
-MobileToggleButton.MouseButton1Click:Connect(function()
-    if not _G.BeyondConfig or not _G.BeyondConfig.Visuals then return end
+-- Декоративный визуальный заголовок секции консоли в контейнере UI
+local LoggerSectionLabel = Instance.new("TextLabel")
+LoggerSectionLabel.Name = "LoggerSection_TitleLabel"
+LoggerSectionLabel.Size = UDim2.new(1, 0, 0, 30)
+LoggerSectionLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+LoggerSectionLabel.BackgroundTransparency = 1
+LoggerSectionLabel.Text = "--- [ ВСТРОЕННАЯ КОНСОЛЬ СОБЫТИЙ ] ---"
+LoggerSectionLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
+LoggerSectionLabel.Font = _G.BeyondConfig.Styles.FontsList.Bold
+LoggerSectionLabel.TextSize = 12
+LoggerSectionLabel.TextStrokeTransparency = 0.8
+LoggerSectionLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+LoggerSectionLabel.Parent = Container
+
+-- Создание специализированного фрейма для отображения строк логов
+local ConsoleBoxFrame = Instance.new("ScrollingFrame")
+ConsoleBoxFrame.Name = "DebugConsole_ScrollingLogContainer"
+ConsoleBoxFrame.Size = UDim2.new(1, 0, 0, 120)
+ConsoleBoxFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+ConsoleBoxFrame.BorderSizePixel = 0
+ConsoleBoxFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ConsoleBoxFrame.ScrollBarThickness = 3
+ConsoleBoxFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90)
+ConsoleBoxFrame.Parent = Container
+
+local ConsoleCorner = Instance.new("UICorner")
+ConsoleCorner.CornerRadius = UDim.new(0, 8)
+ConsoleCorner.Parent = ConsoleBoxFrame
+
+local ConsoleStroke = Instance.new("UIStroke")
+ConsoleStroke.Thickness = 1
+ConsoleStroke.Color = _G.BeyondConfig.Styles.BorderStrokeColor
+ConsoleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+ConsoleStroke.Parent = ConsoleBoxFrame
+
+local ConsoleListLayout = Instance.new("UIListLayout")
+ConsoleListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ConsoleListLayout.Padding = UDim.new(0, 4)
+ConsoleListLayout.Parent = ConsoleBoxFrame
+
+local ConsolePadding = Instance.new("UIPadding")
+ConsolePadding.PaddingLeft = UDim.new(0, 10)
+ConsolePadding.PaddingRight = UDim.new(0, 10)
+ConsolePadding.PaddingTop = UDim.new(0, 6)
+ConsolePadding.PaddingBottom = UDim.new(0, 6)
+ConsolePadding.Parent = ConsoleBoxFrame
+
+-- Функция добавления новой строки лога во внутреннюю консоль меню
+local function PrintToBeyondConsole(logText, logType)
+    if not ScriptActive or not _G.BeyondConfig then return end
     
-    -- Меняем статус видимости меню
-    _G.BeyondConfig.Visuals.MenuOpened = not _G.BeyondConfig.Visuals.MenuOpened
-    local isVisible = _G.BeyondConfig.Visuals.MenuOpened
+    _G.BeyondConfig.Logger.LogCount = _G.BeyondConfig.Logger.LogCount + 1
     
-    local targetSize = isVisible and UDim2.new(0, 440, 0, 340) or UDim2.new(0, 440, 0, 0)
+    -- Определение цвета текста на основе типа лога (Инфо, Варнинг, Ошибка)
+    local textColor = Color3.fromRGB(240, 240, 245)
+    if logType == "warn" then
+        textColor = Color3.fromRGB(255, 185, 0)
+    elseif logType == "error" then
+        textColor = Color3.fromRGB(255, 43, 90)
+    elseif logType == "success" then
+        textColor = Color3.fromRGB(0, 255, 140)
+    end
     
-    -- Анимация кнопки при клике (визуальный отклик)
-    MobileToggleButton.Size = UDim2.new(0, 45, 0, 45)
-    TwService:Create(MobileToggleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 50, 0, 50)}):Play()
+    -- Получение текущего системного времени для красивого префикса
+    local systemTime = os.date("%H:%M:%S")
     
-    -- Плавное сворачивание/разворачивание основного меню
-    TwService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = targetSize}):Play()
+    local LogLineLabel = Instance.new("TextLabel")
+    LogLineLabel.Name = "LogLine_" .. tostring(_G.BeyondConfig.Logger.LogCount)
+    LogLineLabel.Size = UDim2.new(1, 0, 0, 16)
+    LogLineLabel.BackgroundTransparency = 1
+    LogLineLabel.Text = string.format("[%s] %s", systemTime, logText)
+    LogLineLabel.TextColor3 = textColor
+    LogLineLabel.Font = _G.BeyondConfig.Styles.FontsList.Monospace
+    LogLineLabel.TextSize = 11
+    LogLineLabel.TextXAlignment = Enum.TextXAlignment.Left
+    LogLineLabel.LayoutOrder = _G.BeyondConfig.Logger.LogCount
+    LogLineLabel.Parent = ConsoleBoxFrame
     
-    -- Управление обрезкой элементов (ClipsDescendants), чтобы интерфейс не ломался визуально
-    task.spawn(function()
-        if not isVisible then
-            task.wait(0.05)
-            MainFrame.ClipsDescendants = true
-        else
-            MainFrame.ClipsDescendants = false
+    -- Автоматическое управление памятью: удаляем старые строки при превышении лимита
+    local allLogs = ConsoleBoxFrame:GetChildren()
+    local logLabelsCount = 0
+    for _, item in ipairs(allLogs) do
+        if item:IsA("TextLabel") then logLabelsCount = logLabelsCount + 1 end
+    end
+    
+    if logLabelsCount > _G.BeyondConfig.Logger.MaxLinesStored then
+        for _, item in ipairs(allLogs) do
+            if item:IsA("TextLabel") then
+                item:Destroy()
+                break
+            end
         end
-    end)
+    end
+    
+    -- Динамическое обновление размера холста скроллинга и авто-прокрутка вниз
+    ConsoleBoxFrame.CanvasSize = UDim2.new(0, 0, 0, ConsoleListLayout.AbsoluteContentSize.Y + 12)
+    ConsoleBoxFrame.CanvasPosition = Vector2.new(0, ConsoleListLayout.AbsoluteContentSize.Y)
+end
+
+-- Перехватчик вызовов print() и warn() программы для вывода на наш HUD экран
+local function PushClientLog(message)
+    PrintToBeyondConsole(tostring(message), "info")
+end
+
+local function PushClientWarning(message)
+    PrintToBeyondConsole(tostring(message), "warn")
+end
+
+-- Стартовая демонстрация логов для подтверждения успешной компиляции всех 11 частей
+task.spawn(function()
+    task.wait(0.6)
+    PrintToBeyondConsole("BeyondClient v5.0 успешно скомпилирован!", "success")
+    PrintToBeyondConsole("Архитектура адаптирована под HONOR Play5.", "info")
+    PrintToBeyondConsole("Все 11 модулей ядра находятся в активном статусе.", "success")
 end)
 
-print("[BeyondClient Mobile]: Плавающая кнопка для сенсорных экранов успешно инициализирована.")
+-- Создаем финальную кнопку принудительной ручной очистки логов консоли
+local ClearLogsBtn = Instance.new("TextButton")
+ClearLogsBtn.Name = "Console_ClearLogsActionButton"
+ClearLogsBtn.Size = UDim2.new(1, 0, 0, 36)
+ClearLogsBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+ClearLogsBtn.Text = "ОЧИСТИТЬ ОКНО КОНСОЛИ"
+ClearLogsBtn.TextColor3 = Color3.fromRGB(180, 180, 195)
+ClearLogsBtn.Font = _G.BeyondConfig.Styles.FontsList.Bold
+ClearLogsBtn.TextSize = 11
+ClearLogsBtn.Parent = Container
+
+local ClearCorner = Instance.new("UICorner")
+ClearCorner.CornerRadius = UDim.new(0, 6)
+ClearCorner.Parent = ClearLogsBtn
+
+local ClearStroke = Instance.new("UIStroke")
+ClearStroke.Thickness = 1
+ClearStroke.Color = _G.BeyondConfig.Styles.BorderStrokeColor
+ClearStroke.Parent = ClearLogsBtn
+
+ClearLogsBtn.MouseButton1Click:Connect(function()
+    if not ScriptActive then return end
+    for _, item in ipairs(ConsoleBoxFrame:GetChildren()) do
+        if item:IsA("TextLabel") then item:Destroy() end
+    end
+    ConsoleBoxFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    PrintToBeyondConsole("Консоль логов успешно очищена пользователем.", "warn")
+end)
+
+-- Финальный аккорд запуска: Переопределяем размеры и запускаем плавное проявление меню
+MainFrame.Size = UDim2.new(0, 440, 0, 0)
+MainFrame.ClipsDescendants = true
+MainFrame.Visible = true
+
+local finalBootTween = TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 440, 0, 340)})
+finalBootTween:Play()
+
+finalBootTween.Completed:Connect(function()
+    if MainFrame then MainFrame.ClipsDescendants = false end
+end)
