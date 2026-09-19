@@ -23,13 +23,11 @@ local RED_HORN = Color3.fromRGB(220, 40, 40)
 local St = {Speed = 16, Jump = false, Gh = false, AutoFarm = false, Stealth = false}
 local cW, origStats = {}, {}
 
--- 1. ИКОНКА (Черный квадрат 80х80 с синей неоновой рамкой)
 local AT = Instance.new("Frame", SG)
 AT.Size = UDim2.new(0, 80, 0, 80)
 AT.Position = UDim2.new(0.05, 0, 0.2, 0)
 AT.BackgroundColor3 = BK; AT.BorderColor3 = BL; AT.BorderSizePixel = 2; AT.Active = true
 
--- ДЕТАЛЬНАЯ ОТРИСОВКА ЧИБИ НОЛЬ ДВА ПО ТВОЕМУ ФОТО
 local HairBack = Instance.new("Frame", AT)
 HairBack.Size = UDim2.new(0.9, 0, 0.85, 0)
 HairBack.Position = UDim2.new(0.05, 0, 0.1, 0)
@@ -70,7 +68,6 @@ EyeR.Size = UDim2.new(0.24, 0, 0.35, 0)
 EyeR.Position = UDim2.new(0.64, 0, 0.25, 0)
 EyeR.BackgroundColor3 = Color3.fromRGB(40, 180, 185); EyeR.BorderSizePixel = 0; EyeR.ZIndex = 1
 
--- ОТКРЫТЫЙ УЛЫБАЮЩИЙСЯ РОТ И ЗУБКИ С КЛЫКАМИ ПРЯМО ПО КАРТИНКЕ
 local Mouth = Instance.new("Frame", Face)
 Mouth.Size = UDim2.new(0.35, 0, 0.25, 0)
 Mouth.Position = UDim2.new(0.325, 0, 0.65, 0)
@@ -87,12 +84,10 @@ ToothR.Size = UDim2.new(0.15, 0, 0.2, 0)
 ToothR.Position = UDim2.new(0.75, 0, 0, 0)
 ToothR.BackgroundColor3 = WH; ToothR.BorderSizePixel = 0; ToothR.ZIndex = 2
 
--- ТАЧ-КНОПКА КЛИКА (ZIndex = 100 на переднем плане)
 local TB = Instance.new("TextButton", AT)
 TB.Size = UDim2.new(1, 0, 1, 0)
 TB.BackgroundTransparency = 1; TB.Text = ""; TB.ZIndex = 100
 
--- ГЛАВНАЯ ПРОФЕССИОНАЛЬНАЯ КОНСОЛЬ КЛИЕНТА
 local MM = Instance.new("Frame", SG)
 MM.Size = UDim2.new(0.50, 0, 0.80, 0)
 MM.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -103,14 +98,13 @@ local Ly = Instance.new("UIListLayout", MM)
 Ly.Padding = UDim.new(0, 6)
 Ly.HorizontalAlignment, Ly.VerticalAlignment = Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top
 
--- МОБИЛЬНЫЙ DRAG UI ДЛЯ 440 DPI
 local function drag(frame, trigger)
 	local tr = trigger or frame; local d, di, ds, sp
 	tr.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; ds = i.Position; sp = frame.Position end end)
 	tr.InputChanged:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then di = i end end)
 	R.RenderStepped:Connect(function() if d and di then local dl = di.Position - ds; frame.Position = UDim2.new(sp.X.Scale, sp.X.Offset + dl.X, sp.Y.Scale, sp.Y.Offset + dl.Y) end end)
 	U.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = false end end)
-end drag(AT, TB) drag(MM)
+end drag(AT, TB); drag(MM)
 
 local Bar = Instance.new("Frame", MM) Bar.Size = UDim2.new(0.95, 0, 0, 40) Bar.BackgroundTransparency = 1; Bar.ZIndex = 11
 local Title = Instance.new("TextLabel", Bar) Title.Size = UDim2.new(0.6, 0, 1, 0) Title.Text = "USERBEYOND // DEV_CONSOLE_v3.0" Title.TextColor3 = BL; Title.TextSize = 13; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Font = Enum.Font.Code; Title.ZIndex = 11
@@ -125,7 +119,6 @@ local bGh = cB("Проход Сквозь Все Стены (Noclip Mode)")
 local bFm = cB("Сверх-Фарм Опыта и Силы (Млн EXP/мс)")
 local bSth = cB("Анонимность (Скрыть Ник и Топ Лидеров)")
 
--- ПОЛЗУНОК СКОРОСТИ ОТ 16 ДО 300 ЕДИНИЦ
 local SliderFrame = Instance.new("Frame", MM) SliderFrame.Size = UDim2.new(0.94, 0, 0, 35) SliderFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26) SliderFrame.ZIndex = 11; Instance.new("UICorner", SliderFrame)
 local SliderText = Instance.new("TextLabel", SliderFrame) SliderText.Size = UDim2.new(0.4, 0, 1, 0) SliderText.BackgroundTransparency = 1; SliderText.Text = "Скорость: 35" SliderText.TextColor3 = WH; SliderText.TextSize = 11; SliderText.ZIndex = 12; SliderText.Font = Enum.Font.Code
 local SliderBar = Instance.new("Frame", SliderFrame) SliderBar.Size = UDim2.new(0.55, 0, 0, 8) SliderBar.Position = UDim2.new(0.4, 0, 0.4, 0) SliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50); SliderBar.ZIndex = 12
