@@ -1,0 +1,52 @@
+local P,T,U,R,L=game:GetService("Players"),game:GetService("TweenService"),game:GetService("UserInputService"),game:GetService("RunService"),game:GetService("Players").LocalPlayer
+if _G.Hub then _G.Hub=false task.wait(0.1) end _G.Hub=true
+local old=L.PlayerGui:FindFirstChild("DeltaAnimeHub")if old then old:Destroy() end
+local SG=Instance.new("ScreenGui",L.PlayerGui)SG.Name="DeltaAnimeHub"SG.IgnoreGuiInset=true
+local BL,BK,WH=Color3.fromRGB(0,150,255),Color3.fromRGB(15,15,15),Color3.fromRGB(255,255,255)
+local St={Sp=false,Jm=false,Hb=false,Gh=false,Es=false,St=false,An=1}local cW,eB={},{}
+local AT=Instance.new("Frame",SG)AT.Size=UDim2.new(0,0,0,0)AT.Position=UDim2.new(0.05,0,0.2,0)AT.BackgroundColor3=BK;AT.BorderColor3=BL;AT.BorderSizePixel=3;AT.Active=true
+T:Create(AT,TweenInfo.new(0.2),{Size=UDim2.new(0,75,0,75)}):Play()
+local Fc=Instance.new("Frame",AT)Fc.Size=UDim2.new(0.4,0,0.4,0)Fc.Position=UDim2.new(0.3,0,0.35,0)Fc.BackgroundColor3=Color3.fromRGB(255,220,200)Fc.BorderSizePixel=0
+local Hr=Instance.new("Frame",AT)Hr.Size=UDim2.new(0.5,0,0.25,0)Hr.Position=UDim2.new(0.25,0,0.15,0)Hr.BackgroundColor3=Color3.fromRGB(50,50,50)Hr.BorderSizePixel=0
+local LE=Instance.new("Frame",Fc)LE.Size=UDim2.new(0,0.2,0,0.2)LE.Position=UDim2.new(0.2,0,0.3,0)LE.BackgroundColor3=BL
+local RE=Instance.new("Frame",Fc)RE.Size=UDim2.new(0,0.2,0,0.2)RE.Position=UDim2.new(0.6,0,0.3,0)RE.BackgroundColor3=BL
+local TB=Instance.new("TextButton",AT)TB.Size=UDim2.new(1,0,1,0)TB.BackgroundTransparency=1;TB.Text=""
+local MM=Instance.new("Frame",SG)MM.Size=UDim2.new(0,0,0,0)MM.Position=UDim2.new(0.5,0,0.5,0)MM.AnchorPoint=Vector2.new(0.5,0.5)MM.BackgroundColor3=BK;MM.BorderColor3=BL;MM.BorderSizePixel=4;MM.Visible=false;MM.Active=true
+local Ly=Instance.new("UIListLayout",MM)Ly.Padding=UDim.new(0,5)Ly.HorizontalAlignment,Ly.VerticalAlignment=Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.Center
+local function drag(f)
+	local d,di,ds,sp;f.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then d=true;ds=i.Position;sp=f.Position;i.Changed:Connect(function()if i.UserInputState==Enum.UserInputState.End then d=false end end)end end)
+	f.InputChanged:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch then di=i end end)
+	R.RenderStepped:Connect(function() if d and di then local dl=di.Position-ds;f.Position=UDim2.new(sp.X.Scale,sp.X.Offset+dl.X,sp.Y.Scale,sp.Y.Offset+dl.Y) end end)
+end drag(AT)drag(MM)
+local Bar=Instance.new("Frame",MM)Bar.Size=UDim2.new(0.95,0,0,35)Bar.BackgroundTransparency=1
+local Cl=Instance.new("TextButton",Bar)Cl.Size=UDim2.new(0,35,0,35)Cl.Position=UDim2.new(1,-35,0,0)Cl.BackgroundColor3=Color3.fromRGB(200,50,50)Cl.Text="X"Cl.TextColor3=WH;Instance.new("UICorner",Cl)
+local Mn=Instance.new("TextButton",Bar)Mn.Size=UDim2.new(0,35,0,35)Mn.Position=UDim2.new(1,-75,0,0)Mn.BackgroundColor3=Color3.fromRGB(60,60,60)Mn.Text="—"Mn.TextColor3=WH;Instance.new("UICorner",Mn)
+local function cB(n,t)
+	local b=Instance.new("TextButton",MM)b.Size=UDim2.new(0.92,0,0,35)b.BackgroundColor3=Color3.fromRGB(40,40,40)b.BorderColor3=BL;b.Text=t.." [ВЫКЛ]" b.TextColor3=WH;b.TextSize=13;Instance.new("UICorner",b) return b
+end
+local bAn,bSp,bJm,bHb,bGh,bEs,bSt=cB("An","Анимация: Плавная"),cB("Sp","Жесткий Бег"),cB("Jm","Беск. Прыжок"),cB("Hb","Увеличить Хитбоксы"),cB("Gh","Стены-Призраки"),cB("Es","Лазеры Взгляда"),cB("St","Анти-Отброс и Стан")
+local function gTI(m) if m==1 then return TweenInfo.new(0.5,Enum.EasingStyle.Quad,Enum.EasingDirection.Out)elseif m==3 then return TweenInfo.new(0.5,Enum.EasingStyle.Back,Enum.EasingDirection.Out)end return nil end
+local function tM(o)
+	if o then AT.Visible=false;MM.Visible=true;if St.An==2 then MM.Size=UDim2.new(0.45,0,0.75,0)else MM.Size=UDim2.new(0,0,0,0)T:Create(MM,gTI(St.An),{Size=UDim2.new(0.45,0,0.75,0)}):Play() end
+	else if St.An==2 then MM.Visible=false;AT.Visible=true else local t=T:Create(MM,gTI(St.An),{Size=UDim2.new(0,0,0,0)})t:Play()t.Completed:Connect(function()MM.Visible=false;AT.Visible=true end)end end
+end
+TB.MouseButton1Click:Connect(function()tM(true)end)Mn.MouseButton1Click:Connect(function()tM(false)end)
+bAn.MouseButton1Click:Connect(function() St.An=St.An+1;if St.An>3 then St.An=1 end local n={"Плавная","Без аним.","Отскок"}bAn.Text="Анимация: "..n[St.An] end)
+R.RenderStepped:Connect(function() if St.Sp and _G.Hub then local c=L.Character;local h=c and c:FindFirstChildOfClass("Humanoid")if h then h.WalkSpeed=35 end end end)
+bSp.MouseButton1Click:Connect(function() St.Sp=not St.Sp;bSp.Text=St.Sp and "Жесткий Бег [ВКЛ]" or "Жесткий Бег [ВЫКЛ]"bSp.BackgroundColor3=St.Sp and Color3.fromRGB(0,150,100)or Color3.fromRGB(40,40,40) end)
+bJm.MouseButton1Click:Connect(function() St.Jm=not St.Jm;bJm.Text=St.Jm and "Беск. Прыжок [ВКЛ]" or "Беск. Прыжок [ВЫКЛ]"bJm.BackgroundColor3=St.Jm and Color3.fromRGB(0,150,100)or Color3.fromRGB(40,40,40) end)
+U.JumpRequest:Connect(function() local c=L.Character;local h=c and c:FindFirstChildOfClass("Humanoid")if St.Jm and h and _G.Hub then h:ChangeState(Enum.HumanoidStateType.Jumping) end end)
+bHb.MouseButton1Click:Connect(function() St.Hb=not St.Hb;bHb.Text=St.Hb and "Увеличить Хитбоксы [ВКЛ]" or "Увеличить Хитбоксы [ВЫКЛ]"bHb.BackgroundColor3=St.Hb and Color3.fromRGB(0,150,100)or Color3.fromRGB(40,40,40) end)
+task.spawn(function() while task.wait(0.5)do if St.Hb and _G.Hub then for _,v in ipairs(P:GetPlayers())do if v~=L and v.Character and v.Character:FindFirstChild("HumanoidRootPart")then local r=v.Character.HumanoidRootPart;r.Size=Vector3.new(14,14,14)r.Transparency=0.7;r.Color=Color3.fromRGB(255,0,0)r.CanCollide=false end end end end end)
+local function isF(p) if p.Name:lower():find("floor") or p.Name:lower():find("baseplate") then return true end return p.CFrame.UpVector.Y>0.9 and p.Size.X>10 end
+bGh.MouseButton1Click:Connect(function() St.Gh=not St.Gh;bGh.Text=St.Gh and "Стены-Призраки [ВКЛ]" or "Стены-Призраки [ВЫКЛ]"bGh.BackgroundColor3=St.Gh and Color3.fromRGB(0,150,100)or Color3.fromRGB(40,40,40)
+	if St.Gh then for _,o in ipairs(workspace:GetDescendants())do if o:IsA("BasePart")and not isF(o)and not o:IsDescendantOf(L.Character)then cW[o]={C=o.CanCollide,T=o.Transparency}o.CanCollide=false;o.Transparency=0.65 end end
+	else for p,g in pairs(cW)do if p and p.Parent then p.CanCollide=g.C;p.Transparency=g.T end end table.clear(cW)end
+end)
+local function clE() for _,o in ipairs(eB)do if o then o:Destroy() end end table.clear(eB) end
+bEs.MouseButton1Click:Connect(function() St.Es=not St.Es;bEs.Text=St.Es and "Лазеры Взгляда [ВКЛ]" or "Лазеры Взгляда [ВЫКЛ]"bEs.BackgroundColor3=St.Es and Color3.fromRGB(0,150,100)or Color3.fromRGB(40,40,40)
+	if St.Es then clE()for _,p in ipairs(P:GetPlayers())do if p~=L and p.Character and p.Character:FindFirstChild("Head")then local h=p.Character.Head;local a0,a1=Instance.new("Attachment",h),Instance.new("Attachment",h)a1.Position=Vector3.new(0,0,-15)local b=Instance.new("Beam",h)b.Attachment0,b.Attachment1,b.Color,b.FaceCamera,b.Width0,b.Width1=a0,a1,ColorSequence.new(BL),true,0.2,0.2 table.insert(eB,b)table.insert(eB,a0)table.insert(eB,a1)end end else clE()end
+end)
+R.Heartbeat:Connect(function() if St.St and _G.Hub then local c=L.Character;local h,r=c and c:FindFirstChildOfClass("Humanoid"),c and c:FindFirstChild("HumanoidRootPart")if h and r then if h.PlatformStand or h.Sit then h.PlatformStand=false;h.Sit=false;h:ChangeState(Enum.HumanoidStateType.Running)end h:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,false)h:SetStateEnabled(Enum.HumanoidStateType.FallingDown,false)for _,ch in ipairs(r:GetChildren())do if ch:IsA("BodyVelocity")or ch:IsA("LinearVelocity")or ch:IsA("BodyForce")then ch:Destroy() end end end end end)
+bSt.MouseButton1Click:Connect(function() St.St=not St.St;bSt.Text=St.St and "Анти-Отброс [ВКЛ]" or "Анти-Отброс [ВЫКЛ]"bSt.BackgroundColor3=St.St and Color3.fromRGB(0,150,100)or Color3.fromRGB(40,40,40) end)
+Cl.MouseButton1Click:Connect(function() _G.Hub=false;task.wait(0.1)for p,g in pairs(cW)do if p and p.Parent then p.CanCollide=g.C;p.Transparency=g.T end end clE()local c=L.Character;local h=c and c:FindFirstChildOfClass("Humanoid")if h then h.WalkSpeed=16 end for _,v in ipairs(P:GetPlayers())do if v.Character and v.Character:FindFirstChild("HumanoidRootPart")then local r=v.Character.HumanoidRootPart;r.Size=Vector3.new(2,2,1)r.Transparency=1;r.CanCollide=true end end SG:Destroy() end)
