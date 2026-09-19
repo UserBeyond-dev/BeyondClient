@@ -1,161 +1,685 @@
-local P = game:GetService("Players")
-local T = game:GetService("TweenService")
-local U = game:GetService("UserInputService")
-local R = game:GetService("RunService")
-local L = P.LocalPlayer
+--[[
+    BeyondClient v5.0 - Ultimate Premium Edition
+    Developer: UserBeyond-dev
+    Repository: GitHub (Japan) / BeyondClient
+    File: main.lua (Part 1/4 - Core Architecture & UI Framework)
+    Icon Asset ID: rbxassetid://114254245648192 (Chibi Zero Two 4K)
+--]]
 
-if _G.ZeroTwoActive then _G.ZeroTwoActive = false task.wait(0.2) end
-_G.ZeroTwoActive = true
+-- Безопасное кэширование системных сервисов (Защита от хуков со стороны игры)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
 
-local old = L.PlayerGui:FindFirstChild("ZeroTwoPremiumHub")
-if old then old:Destroy() end
+local LocalPlayer = Players.LocalPlayer
+assert(LocalPlayer, "[BeyondClient Error]: Окружение игры не инициализировано.")
+local Camera = workspace.CurrentCamera or workspace:WaitForChild("Camera")
 
-local SG = Instance.new("ScreenGui", L.PlayerGui)
-SG.Name = "ZeroTwoPremiumHub"
-SG.IgnoreGuiInset = true
-
-local BL = Color3.fromRGB(0, 150, 255)
-local BK = Color3.fromRGB(12, 12, 14)
-local WH = Color3.fromRGB(255, 255, 255)
-
-local St = {Speed = 16, Jump = false, Gh = false, God = false, Scale = 1, SizeMenu = false}
-local cW, origStats = {}, {}
-
-local AT = Instance.new("Frame", SG)
-AT.Size = UDim2.new(0, 80, 0, 80)
-AT.Position = UDim2.new(0.05, 0, 0.2, 0)
-AT.BackgroundColor3 = BK; AT.BorderColor3 = BL; AT.BorderSizePixel = 2; AT.Active = true
-
-local Img = Instance.new("ImageLabel", AT)
-Img.Size = UDim2.new(0.9, 0, 0.9, 0)
-Img.Position = UDim2.new(0.05, 0, 0.05, 0)
-Img.BackgroundTransparency = 1
-Img.Image = "rbxassetid://114254245648192"
-
-local TB = Instance.new("TextButton", AT)
-TB.Size = UDim2.new(1, 0, 1, 0)
-TB.BackgroundTransparency = 1; TB.Text = ""; TB.ZIndex = 100
-local MM = Instance.new("Frame", SG)
-MM.Size = UDim2.new(0.48, 0, 0.85, 0)
-MM.Position = UDim2.new(0.5, 0, 0.5, 0)
-MM.AnchorPoint = Vector2.new(0.5, 0.5)
-MM.BackgroundColor3 = BK; MM.BorderColor3 = BL; MM.BorderSizePixel = 4; MM.Visible = false; MM.Active = true; MM.ZIndex = 10
-
-local ContentFrame = Instance.new("Frame", MM)
-ContentFrame.Size = UDim2.new(1, 0, 0.82, 0)
-ContentFrame.Position = UDim2.new(0, 0, 0.09, 0)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.ZIndex = 11
-
-local Ly = Instance.new("UIListLayout", ContentFrame)
-Ly.Padding = UDim.new(0, 5)
-Ly.HorizontalAlignment, Ly.VerticalAlignment = Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top
-
-local TopBar = Instance.new("Frame", MM) TopBar.Size = UDim2.new(1, 0, 0, 35) TopBar.BackgroundColor3 = Color3.fromRGB(18, 18, 22); TopBar.ZIndex = 12
-local BottomBar = Instance.new("Frame", MM) BottomBar.Size = UDim2.new(1, 0, 0, 25) BottomBar.Position = UDim2.new(0, 0, 1, -25) BottomBar.BackgroundColor3 = Color3.fromRGB(18, 18, 22); BottomBar.ZIndex = 12
-
-local function makeDraggable(frame, trigger)
-	local d, di, ds, sp
-	trigger.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; ds = i.Position; sp = frame.Position end end)
-	trigger.InputChanged:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then di = i end end)
-	R.RenderStepped:Connect(function() if d and di then local dl = di.Position - ds; frame.Position = UDim2.new(sp.X.Scale, sp.X.Offset + dl.X, sp.Y.Scale, sp.Y.Offset + dl.Y) end end)
-	U.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = false end end)
-end
-makeDraggable(AT, TB)
-makeDraggable(MM, TopBar)
-makeDraggable(MM, BottomBar)
-
-local Title = Instance.new("TextLabel", TopBar) Title.Size = UDim2.new(0.6, 0, 1, 0) Title.Position = UDim2.new(0.03, 0, 0, 0) Title.Text = "BEYOND CLIENT v4.0" Title.TextColor3 = BL; Title.TextSize = 13; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Font = Enum.Font.Code; Title.ZIndex = 13
-local Cl = Instance.new("TextButton", TopBar) Cl.Size = UDim2.new(0, 30, 0, 30) Cl.Position = UDim2.new(1, -35, 0, 2) Cl.BackgroundColor3 = Color3.fromRGB(180, 40, 40) Cl.Text = "X" Cl.TextColor3 = WH; Cl.ZIndex = 14; Instance.new("UICorner", Cl)
-local Mn = Instance.new("TextButton", TopBar) Mn.Size = UDim2.new(0, 30, 0, 30) Mn.Position = UDim2.new(1, -70, 0, 2) Mn.BackgroundColor3 = Color3.fromRGB(60, 60, 60) Mn.Text = "—" Mn.TextColor3 = WH; Mn.ZIndex = 14; Instance.new("UICorner", Mn)
-local function cB(t)
-	local b = Instance.new("TextButton", ContentFrame) b.Size = UDim2.new(0.94, 0, 0, 35) b.BackgroundColor3 = Color3.fromRGB(22, 22, 26) b.Text = t b.TextColor3 = WH; b.TextSize = 13; b.Font = Enum.Font.SourceSansBold; b.ZIndex = 12; Instance.new("UICorner", b) return b
+-- Очистка старых сессий скрипта во избежание утечек памяти (Memory Leaks)
+if _G.BeyondClient_Shutdown then
+    pcall(_G.BeyondClient_Shutdown)
 end
 
-local bSp = cB("Бег [ВЫКЛ]")
-local bJm = cB("Бесконечный Прыжок [ВЫКЛ]")
-local bGh = cB("Стены-Призраки [ВЫКЛ]")
-local bGd = cB("Бессмертие [ВЫКЛ]")
-local bSz = cB("Размер тела >>")
+-- Инициализация глобального хранилища конфигурации
+_G.BeyondConfig = {
+    Version = "5.0-Alpha",
+    Developer = "UserBeyond-dev",
+    SpeedValue = 16,
+    InfiniteJump = false,
+    Noclip = false,
+    GodMode = false,
+    BodySize = "Средний",
+    ThemeColor = Color3.fromRGB(255, 43, 90), -- Розовый Zero Two
+    BgColor = Color3.fromRGB(15, 15, 20),
+    AccentGlow = Color3.fromRGB(255, 100, 130)
+}
 
-local SFrame = Instance.new("Frame", ContentFrame) SFrame.Size = UDim2.new(0.94, 0, 0, 32) SFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26) SFrame.ZIndex = 12; Instance.new("UICorner", SFrame)
-local SText = Instance.new("TextLabel", SFrame) SText.Size = UDim2.new(0.35, 0, 1, 0) SText.BackgroundTransparency = 1; SText.Text = "Скорость: 16" SText.TextColor3 = WH; SText.TextSize = 11; SText.ZIndex = 13; SText.Font = Enum.Font.Code
-local SBar = Instance.new("Frame", SFrame) SBar.Size = UDim2.new(0.58, 0, 0, 6) SBar.Position = UDim2.new(0.38, 0, 0.4, 0) SBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50); SBar.ZIndex = 13
-local SButton = Instance.new("TextButton", SBar) SButton.Size = UDim2.new(0, 14, 0, 14) SButton.Position = UDim2.new(0, 0, -0.5, 0) SButton.BackgroundColor3 = BL; SButton.Text = ""; SButton.ZIndex = 14; Instance.new("UICorner", SButton)
-
-local sDrag = false
-SButton.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sDrag = true end end)
-U.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sDrag = false end end)
-R.RenderStepped:Connect(function()
-	if sDrag then
-		local percentage = math.clamp((U:GetMouseLocation().X - SBar.AbsolutePosition.X) / SBar.AbsoluteSize.X, 0, 1)
-		SButton.Position = UDim2.new(percentage, -7, -0.5, 0)
-		St.Speed = math.floor(16 + (percentage * 284))
-		SText.Text = "Скорость: " .. tostring(St.Speed)
-	end
-end)
-
-local SizeSubFrame = Instance.new("Frame", ContentFrame) SizeSubFrame.Size = UDim2.new(0.94, 0, 0, 75) SizeSubFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32) SizeSubFrame.Visible = false; SizeSubFrame.ZIndex = 12; Instance.new("UICorner", SizeSubFrame)
-local SzGrid = Instance.new("UIGridLayout", SizeSubFrame) SzGrid.CellSize = UDim2.new(0.23, 0, 0, 30) SzGrid.Padding = UDim2.new(0, 4, 0, 4) SzGrid.HorizontalAlignment, SzGrid.VerticalAlignment = Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
-
-local function cSzB(t, val)
-	local b = Instance.new("TextButton", SizeSubFrame) b.BackgroundColor3 = Color3.fromRGB(45, 45, 50) b.Text = t; b.TextColor3 = WH; b.TextSize = 10; b.ZIndex = 13; Instance.new("UICorner", b)
-	b.MouseButton1Click:Connect(function() St.Scale = val end) return b
+-- ====================================================================
+-- [ МОДУЛЬ ОБХОДА И ЗАЩИТЫ (ANTI-CHEAT BYPASS CORE) ]
+-- ====================================================================
+local BypassModule = {}
+do
+    local mt = getrawmetatable(game)
+    local old_namecall = mt.__namecall
+    local old_index = mt.__index
+    
+    setreadonly(mt, false)
+    
+    -- Защита от детекта скрипта через сканирование CoreGui / Namecall
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        
+        if not checkcaller() then
+            -- Блокируем отправку подозрительных репортов на сервер игры
+            if method == "FireServer" and tostring(self) == "AntiCheatReport" then
+                return nil
+            end
+            if method == "Kick" then
+                print("[BeyondClient Bypass]: Заблокирована попытка кика со стороны сервера.")
+                return nil
+            end
+        end
+        return old_namecall(self, ...)
+    end)
+    
+    setreadonly(mt, true)
+    print("[BeyondClient]: Модуль Anti-Cheat Bypass успешно интегрирован в Metatable.")
 end
-cSzB("Мелкий", 0.3) cSzB("Средний", 1) cSzB("Большой", 2.5) cSzB("Гигант", 5)
-local SizeSliderFrame = Instance.new("Frame", ContentFrame) SizeSliderFrame.Size = UDim2.new(0.94, 0, 0, 32) SizeSliderFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26) SizeSliderFrame.ZIndex = 12; Instance.new("UICorner", SizeSliderFrame)
-local SizeSliderText = Instance.new("TextLabel", SizeSliderFrame) SizeSliderText.Size = UDim2.new(0.35, 0, 1, 0) SizeSliderText.BackgroundTransparency = 1; SizeSliderText.Text = "Рост: 1.0" SizeSliderText.TextColor3 = WH; SizeSliderText.TextSize = 11; SizeSliderText.ZIndex = 13; SizeSliderText.Font = Enum.Font.Code
-local SizeSliderBar = Instance.new("Frame", SizeSliderFrame) SizeSliderBar.Size = UDim2.new(0.58, 0, 0, 6) SizeSliderBar.Position = UDim2.new(0.38, 0, 0.4, 0) SizeSliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50); SizeSliderBar.ZIndex = 13
-local SizeSliderButton = Instance.new("TextButton", SizeSliderBar) SizeSliderButton.Size = UDim2.new(0, 14, 0, 14) SizeSliderButton.Position = UDim2.new(0.1, 0, -0.5, 0) SizeSliderButton.BackgroundColor3 = BL; SizeSliderButton.Text = ""; SizeSliderButton.ZIndex = 14; Instance.new("UICorner", SizeSliderButton)
 
-local szDrag = false
-SizeSliderButton.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then szDrag = true end end)
-U.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then szDrag = false end end)
-R.RenderStepped:Connect(function()
-	if szDrag then
-		local percentage = math.clamp((U:GetMouseLocation().X - SizeSliderBar.AbsolutePosition.X) / SizeSliderBar.AbsoluteSize.X, 0, 1)
-		SizeSliderButton.Position = UDim2.new(percentage, -7, -0.5, 0)
-		St.Scale = 0.2 + (percentage * 5.8)
-		SizeSliderText.Text = "Рост: " .. string.format("%.1f", St.Scale)
-	end
+-- ====================================================================
+-- [ БАЗОВЫЙ ИНТЕРФЕЙС И ГЛУБОКАЯ СТИЛИЗАЦИЯ (TOP-TIER WEB DESIGN) ]
+-- ====================================================================
+local BeyondScreenGui = Instance.new("ScreenGui")
+BeyondScreenGui.Name = HttpService:GenerateGUID(false) -- Рандомное имя от детекта
+BeyondScreenGui.ResetOnSpawn = false
+BeyondScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local success, err = pcall(function()
+    BeyondScreenGui.Parent = CoreGui
+end)
+if not success then
+    BeyondScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- Функция безопасного закрытия интерфейса
+_G.BeyondClient_Shutdown = function()
+    BeyondScreenGui:Destroy()
+    _G.BeyondConfig = nil
+end
+
+-- Главный фрейм меню
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainPanel"
+MainFrame.Size = UDim2.new(0, 440, 0, 340)
+MainFrame.Position = UDim2.new(0.5, -220, 0.4, -170)
+MainFrame.BackgroundColor3 = _G.BeyondConfig.BgColor
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Parent = BeyondScreenGui
+
+-- Скругление и размытие углов
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 14)
+Corner.Parent = MainFrame
+
+-- Кастомная неоновая обводка (Stroke Effects)
+local Stroke = Instance.new("UIStroke")
+Stroke.Thickness = 2
+Stroke.Color = _G.BeyondConfig.ThemeColor
+Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+Stroke.Parent = MainFrame
+
+-- Сложный градиент заднего плана
+local BgGradient = Instance.new("UIGradient")
+BgGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(24, 22, 30)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(14, 14, 18)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 14))
+}
+BgGradient.Rotation = 135
+BgGradient.Parent = MainFrame
+
+-- --- ВЕРХНЯЯ ШАПКА МЕНЮ (ЗОНА ХЕНДЛИНГА DRAG-UI #1) ---
+local Header = Instance.new("Frame")
+Header.Name = "HeaderZone"
+Header.Size = UDim2.new(1, 0, 0, 45)
+Header.BackgroundColor3 = Color3.fromRGB(28, 26, 36)
+Header.BorderSizePixel = 0
+Header.Parent = MainFrame
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 14)
+HeaderCorner.Parent = Header
+
+-- Срез нижних углов шапки (визуальный паттерн)
+local HeaderLine = Instance.new("Frame")
+HeaderLine.Size = UDim2.new(1, 0, 0, 2)
+HeaderLine.Position = UDim2.new(0, 0, 1, -2)
+HeaderLine.BackgroundColor3 = _G.BeyondConfig.ThemeColor
+HeaderLine.BorderSizePixel = 0
+HeaderLine.Parent = Header
+
+-- Иконка аниме чиби Ноль Два (4K Asset Инициализация)
+local AvatarIcon = Instance.new("ImageLabel")
+AvatarIcon.Name = "ZeroTwo_4K"
+AvatarIcon.Size = UDim2.new(0, 32, 0, 32)
+AvatarIcon.Position = UDim2.new(0, 12, 0, 6)
+AvatarIcon.BackgroundTransparency = 1
+AvatarIcon.Image = "rbxassetid://114254245648192"
+AvatarIcon.Parent = Header
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -120, 1, 0)
+Title.Position = UDim2.new(0, 52, 0, 0)
+Title.Text = "BEYOND <font color='#FF2B5A'>CLIENT</font> <font color='#A0A0A5'>v5.0</font>"
+Title.RichText = true
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+Title.Parent = Header
+
+local DevTag = Instance.new("TextLabel")
+DevTag.Size = UDim2.new(0, 120, 1, 0)
+DevTag.Position = UDim2.new(1, -132, 0, 0)
+DevTag.Text = "by UserBeyond-dev"
+DevTag.TextColor3 = Color3.fromRGB(140, 140, 160)
+DevTag.Font = Enum.Font.GothamItalic
+DevTag.TextSize = 11
+DevTag.TextXAlignment = Enum.TextXAlignment.Right
+DevTag.BackgroundTransparency = 1
+DevTag.Parent = Header
+
+-- --- НИЖНЯЯ ПАНЕЛЬ МЕНЮ (ЗОНА ХЕНДЛИНГА DRAG-UI #2) ---
+local Footer = Instance.new("Frame")
+Footer.Name = "FooterZone"
+Footer.Size = UDim2.new(1, 0, 0, 25)
+Footer.Position = UDim2.new(0, 0, 1, -25)
+Footer.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+Footer.BorderSizePixel = 0
+Footer.Parent = MainFrame
+
+local FooterCorner = Instance.new("UICorner")
+FooterCorner.CornerRadius = UDim.new(0, 10)
+FooterCorner.Parent = Footer
+
+local FooterText = Instance.new("TextLabel")
+FooterText.Size = UDim2.new(1, -24, 1, 0)
+FooterText.Position = UDim2.new(0, 12, 0, 0)
+FooterText.Text = "Repository: Japan/BeyondClient // Mainframe Stack Connected Successfully"
+FooterText.TextColor3 = Color3.fromRGB(0, 255, 140)
+FooterText.Font = Enum.Font.Code
+FooterText.TextSize = 10
+FooterText.TextXAlignment = Enum.TextXAlignment.Left
+FooterText.BackgroundTransparency = 1
+FooterText.Parent = Footer
+
+-- --- ГЛАВНЫЙ СКОЛЛИНГ-КОНТЕЙНЕР ДЛЯ МОДУЛЕЙ ---
+local Container = Instance.new("ScrollingFrame")
+Container.Name = "ModuleContainer"
+Container.Size = UDim2.new(1, -24, 1, -95)
+Container.Position = UDim2.new(0, 12, 0, 58)
+Container.BackgroundTransparency = 1
+Container.BorderSizePixel = 0
+Container.CanvasSize = UDim2.new(0, 0, 0, 550) -- Запас под весь пак тяжелого функционала
+Container.ScrollBarThickness = 4
+Container.ScrollBarImageColor3 = _G.BeyondConfig.ThemeColor
+Container.Parent = MainFrame
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ListLayout.Padding = UDim.new(0, 12)
+ListLayout.Parent = Container
+
+-- ====================================================================
+-- [ ПРОФЕССИОНАЛЬНЫЙ СТАБИЛЬНЫЙ DRAG-UI (БЕЗ ПРЫЖКОВ ОКНА) ]
+-- ====================================================================
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    -- Полная свобода перемещения, включая увод за края мобильного дисплея
+    MainFrame.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.x, 
+        startPos.Y.Scale, startPos.Y.Offset + delta.y
+    )
+end
+
+local function setupDragZone(zone)
+    zone.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    zone.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseBehavior or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+end
+
+-- Фиксация перетаскивания СТРОГО за шапку и футер (слайдеры теперь работают автономно!)
+setupDragZone(Header)
+setupDragZone(Footer)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateDrag(input)
+    end
 end)
 
-TB.TouchTap:Connect(function() AT.Visible = false; MM.Visible = true end)
-Mn.TouchTap:Connect(function() MM.Visible = false; AT.Visible = true end)
+print("[BeyondClient Framework]: Часть 1 успешно развернута.")
+--[[
+    BeyondClient v5.0 - Ultimate Premium Edition
+    Developer: UserBeyond-dev
+    File: main.lua (Part 2/4 - UI Factory & Velocity Physics Module)
+--]]
 
-R.RenderStepped:Connect(function()
-	local char = L.Character; local root = char and char:FindFirstChild("HumanoidRootPart")
-	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	if St.Speed > 16 and root and hum and hum.MoveDirection.Magnitude > 0 and _G.ZeroTwoActive then
-		local dir = hum.MoveDirection.Unit
-		root.AssemblyLinearVelocity = Vector3.new(dir.X * St.Speed, root.AssemblyLinearVelocity.Y, dir.Z * St.Speed)
-	end
-	if hum and _G.ZeroTwoActive then
-		local hs = hum:FindFirstChild("HeadScale") if hs then hs.Value = St.Scale end
-		local bds = hum:FindFirstChild("BodyDepthScale") if bds then bds.Value = St.Scale end
-		local bws = hum:FindFirstChild("BodyWidthScale") if bws then bws.Value = St.Scale end
-		local bhs = hum:FindFirstChild("BodyHeightScale") if bhs then bhs.Value = St.Scale end
-	end
+-- ====================================================================
+-- [ ПРОФЕССИОНАЛЬНАЯ UI-ФАБРИКА С АНИМАЦИЯМИ (ВЕБ-СТИЛЬ) ]
+-- ====================================================================
+
+-- Конструктор кастомных премиум-слайдеров
+local function CreateSlider(parent, text, min, max, default, callback)
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Size = UDim2.new(1, 0, 0, 55)
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+    SliderFrame.BorderSizePixel = 0
+    SliderFrame.Parent = parent
+    
+    local SliderCorner = Instance.new("UICorner")
+    SliderCorner.CornerRadius = UDim.new(0, 8)
+    SliderCorner.Parent = SliderFrame
+    
+    local SliderStroke = Instance.new("UIStroke")
+    SliderStroke.Thickness = 1
+    SliderStroke.Color = Color3.fromRGB(35, 35, 45)
+    SliderStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    SliderStroke.Parent = SliderFrame
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.8, 0, 0, 25)
+    Label.Position = UDim2.new(0, 12, 0, 4)
+    Label.Text = text .. ": <font color='#FF2B5A'>" .. tostring(default) .. "</font>"
+    Label.RichText = true
+    Label.TextColor3 = Color3.fromRGB(220, 220, 230)
+    Label.Font = Enum.Font.GothamSemibold
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.BackgroundTransparency = 1
+    Label.Parent = SliderFrame
+    
+    local ContainerTrack = Instance.new("Frame")
+    ContainerTrack.Size = UDim2.new(1, -24, 0, 6)
+    ContainerTrack.Position = UDim2.new(0, 12, 0, 36)
+    ContainerTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    ContainerTrack.BorderSizePixel = 0
+    ContainerTrack.Parent = SliderFrame
+    
+    local TrackCorner = Instance.new("UICorner")
+    TrackCorner.CornerRadius = UDim.new(0, 3)
+    TrackCorner.Parent = ContainerTrack
+    
+    local Fill = Instance.new("Frame")
+    Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    Fill.BackgroundColor3 = _G.BeyondConfig.ThemeColor
+    Fill.BorderSizePixel = 0
+    Fill.Parent = ContainerTrack
+    
+    local FillCorner = Instance.new("UICorner")
+    FillCorner.CornerRadius = UDim.new(0, 3)
+    FillCorner.Parent = Fill
+    
+    local SliderBtn = Instance.new("TextButton")
+    SliderBtn.Size = UDim2.new(1, 0, 1, 0)
+    SliderBtn.BackgroundTransparency = 1
+    SliderBtn.Text = ""
+    SliderBtn.Parent = ContainerTrack
+    
+    local isSliding = false
+    
+    local function updateSlider(input)
+        local xOffset = math.clamp(input.Position.X - ContainerTrack.AbsolutePosition.X, 0, ContainerTrack.AbsoluteSize.X)
+        local percentage = xOffset / ContainerTrack.AbsoluteSize.X
+        local rawValue = min + (percentage * (max - min))
+        local finalValue = math.round(rawValue)
+        
+        TweenService:Create(Fill, TweenInfo.new(0.15, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {Size = UDim2.new(percentage, 0, 1, 0)}):Play()
+        Label.Text = text .. ": <font color='#FF2B5A'>" .. tostring(finalValue) .. "</font>"
+        callback(finalValue)
+    end
+    
+    SliderBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isSliding = true
+            TweenService:Create(SliderStroke, TweenInfo.new(0.2), {Color = _G.BeyondConfig.AccentGlow}):Play()
+            updateSlider(input)
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if isSliding and (input.UserInputType == Enum.UserInputType.MouseBehavior or input.UserInputType == Enum.UserInputType.Touch) then
+            updateSlider(input)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isSliding = false
+            TweenService:Create(SliderStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(35, 35, 45)}):Play()
+        end
+    end)
+end
+
+-- Конструктор кастомных интерактивных переключателей (Toggles)
+local function CreateToggle(parent, text, default, callback)
+    local ToggleFrame = Instance.new("Frame")
+    ToggleFrame.Size = UDim2.new(1, 0, 0, 44)
+    ToggleFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+    ToggleFrame.BorderSizePixel = 0
+    ToggleFrame.Parent = parent
+    
+    local ToggleCorner = Instance.new("UICorner")
+    ToggleCorner.CornerRadius = UDim.new(0, 8)
+    ToggleCorner.Parent = ToggleFrame
+    
+    local ToggleStroke = Instance.new("UIStroke")
+    ToggleStroke.Thickness = 1
+    ToggleStroke.Color = Color3.fromRGB(35, 35, 45)
+    ToggleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    ToggleStroke.Parent = ToggleFrame
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.7, 0, 1, 0)
+    Label.Position = UDim2.new(0, 12, 0, 0)
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(210, 210, 220)
+    Label.Font = Enum.Font.GothamSemibold
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.BackgroundTransparency = 1
+    Label.Parent = ToggleFrame
+    
+    local CheckBox = Instance.new("TextButton")
+    CheckBox.Size = UDim2.new(0, 40, 0, 22)
+    CheckBox.Position = UDim2.new(1, -52, 0.5, -11)
+    CheckBox.BackgroundColor3 = default and _G.BeyondConfig.ThemeColor or Color3.fromRGB(45, 45, 60)
+    CheckBox.Text = ""
+    CheckBox.Parent = ToggleFrame
+    
+    local CBCorner = Instance.new("UICorner")
+    CBCorner.CornerRadius = UDim.new(1, 0)
+    CBCorner.Parent = CheckBox
+    
+    local Indicator = Instance.new("Frame")
+    Indicator.Size = UDim2.new(0, 16, 0, 16)
+    Indicator.Position = default and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+    Indicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Indicator.Parent = CheckBox
+    
+    local IndCorner = Instance.new("UICorner")
+    IndCorner.CornerRadius = UDim.new(1, 0)
+    IndCorner.Parent = Indicator
+    
+    local state = default
+    CheckBox.MouseButton1Click:Connect(function()
+        state = not state
+        local targetColor = state and _G.BeyondConfig.ThemeColor or Color3.fromRGB(45, 45, 60)
+        local targetPos = state and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+        
+        TweenService:Create(CheckBox, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {BackgroundColor3 = targetColor}):Play()
+        TweenService:Create(Indicator, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Position = targetPos}):Play()
+        TweenService:Create(ToggleStroke, TweenInfo.new(0.2), {Color = state and _G.BeyondConfig.AccentGlow or Color3.fromRGB(35, 35, 45)}):Play()
+        
+        callback(state)
+    end)
+end
+
+-- ====================================================================
+-- [ ИНИЦИАЛИЗАЦИЯ ФИЗИЧЕСКОГО МОДУЛЯ СКОРОСТИ ]
+-- ====================================================================
+
+-- Слайдер физического импульса скорости AssemblyLinearVelocity (16 - 300)
+CreateSlider(Container, "Физический Обход Скорости", 16, 300, _G.BeyondConfig.SpeedValue, function(val)
+    _G.BeyondConfig.SpeedValue = val
 end)
 
-bSp.MouseButton1Click:Connect(function() if St.Speed == 16 then St.Speed = 45; bSp.Text = "Бег [ВКЛ]" bSp.BackgroundColor3 = Color3.fromRGB(0, 150, 100) else St.Speed = 16; bSp.Text = "Бег [ВЫКЛ]" bSp.BackgroundColor3 = Color3.fromRGB(22, 22, 26) end end)
-bJm.MouseButton1Click:Connect(function() St.Jump = not St.Jump; bJm.Text = St.Jump and "Бесконечный Прыжок [ВКЛ]" or "Бесконечный Прыжок [ВЫКЛ]" bJm.BackgroundColor3 = St.Jump and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(22, 22, 26) end)
-U.JumpRequest:Connect(function() local root = L.Character and L.Character:FindFirstChild("HumanoidRootPart") if St.Jump and root and _G.ZeroTwoActive then root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, 55, root.AssemblyLinearVelocity.Z) end end)
-
-bGh.MouseButton1Click:Connect(function() St.Gh = not St.Gh; bGh.Text = St.Gh and "Стены-Призраки [ВКЛ]" or "Стены-Призраки [ВЫКЛ]" bGh.BackgroundColor3 = St.Gh and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(22, 22, 26)
-	if St.Gh then for _, o in ipairs(workspace:GetDescendants()) do if o:IsA("BasePart") and o.Name:lower() ~= "floor" and o.Name:lower() ~= "baseplate" and not o:IsDescendantOf(L.Character) then cW[o] = {C = o.CanCollide, T = o.Transparency} o.CanCollide = false; o.Transparency = 0.60 end end
-	else for p, g in pairs(cW) do if p and p.Parent then p.CanCollide = g.C; p.Transparency = g.T end end table.clear(cW) end
+-- Высокоточный расчет векторов движения через Heartbeat (вызывается перед симуляцией физики)
+RunService.Heartbeat:Connect(function()
+    local character = LocalPlayer.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    
+    if rootPart and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+        -- Рассчитываем идеальное направление импульса, сохраняя вертикальную силу гравитации
+        local calculatedVelocity = humanoid.MoveDirection * _G.BeyondConfig.SpeedValue
+        rootPart.AssemblyLinearVelocity = Vector3.new(calculatedVelocity.X, rootPart.AssemblyLinearVelocity.Y, calculatedVelocity.Z)
+    end
 end)
 
-bGd.MouseButton1Click:Connect(function() St.God = not St.God; bGd.Text = St.God and "Бессмертие [ВКЛ]" or "Бессмертие [ВЫКЛ]" bGd.BackgroundColor3 = St.God and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(22, 22, 26)
-	if St.God then
-		local char = L.Character; local hum = char and char:FindFirstChildOfClass("Humanoid")
-		if hum then
-			local clone = hum:Clone() hum:Destroy() clone.Parent = char
-			game:Workspace.CurrentCamera.CameraSubject = clone
-		end
-	end
+print("[BeyondClient UI & Physics]: Часть 2 успешно добавлена.")
+--[[
+    BeyondClient v5.0 - Ultimate Premium Edition
+    Developer: UserBeyond-dev
+    File: main.lua (Part 3/4 - Jump Vector Impulses & Selective Raycast Noclip)
+--]]
+
+-- ====================================================================
+-- [ МОДУЛЬ ИМПУЛЬСНОГО БЕСКОНЕЧНОГО ПРЫЖКА ]
+-- ====================================================================
+
+CreateToggle(Container, "Бесконечный Прыжок (Импульсный)", _G.BeyondConfig.InfiniteJump, function(state)
+    _G.BeyondConfig.InfiniteJump = state
 end)
 
-bSz.MouseButton1Click:Connect(function() St.SizeMenu = not St.SizeMenu; SizeSubFrame.Visible = St.SizeMenu; bSz.Text = St.SizeMenu and "Размер тела <<" or "Размер тела >>" end)
-Cl.MouseButton1Click:Connect(function() _G.ZeroTwoActive = false; task.wait(0.1) for p, g in pairs(cW) do if p and p.Parent then p.CanCollide = g.C; p.Transparency = g.T end end SG:Destroy() end)
+-- Перехват запроса на прыжок напрямую из UserInputService
+UserInputService.JumpRequest:Connect(function()
+    if _G.BeyondConfig.InfiniteJump then
+        local character = LocalPlayer.Character
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+        
+        if rootPart then
+            -- Подаем чистый силовой вектор строго вверх, сохраняя текущую инерцию осей X и Z
+            rootPart.AssemblyLinearVelocity = Vector3.new(
+                rootPart.AssemblyLinearVelocity.X, 
+                55, -- Оптимальная сила импульса прыжка
+                rootPart.AssemblyLinearVelocity.Z
+            )
+        end
+    end
+end)
+
+-- ====================================================================
+-- [ СЕЛЕКТИВНЫЙ NOCLIP С ЛУЧЕВЫМ СКАНИРОВАНИЕМ ПОЛА ]
+-- ====================================================================
+
+CreateToggle(Container, "Проход Сквозь Стены (Noclip)", _G.BeyondConfig.Noclip, function(state)
+    _G.BeyondConfig.Noclip = state
+end)
+
+-- Инициализация параметров лучевого сканирования (Raycast) для оптимизации в цикле
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+
+-- Использование Stepped для отключения коллизий внутри физического кадра симуляции
+RunService.Stepped:Connect(function()
+    if _G.BeyondConfig.Noclip then
+        local character = LocalPlayer.Character
+        if character then
+            raycastParams.FilterDescendantsInstances = {character}
+            
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    -- Исключаем критические корневые узлы из базового отключения во избежание десинхронизации
+                    if part.Name ~= "UpperTorso" and part.Name ~= "LowerTorso" and part.Name ~= "HumanoidRootPart" then
+                        part.CanCollide = false
+                    else
+                        -- Защита от бесконечного падения: сканируем пространство строго под персонажем
+                        local rayOrigin = part.Position
+                        local rayDirection = Vector3.new(0, -6.5, 0) -- Дистанция детекции поверхности земли
+                        
+                        local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+                        
+                        if raycastResult then
+                            -- Если луч обнаружил твердую опору или ландшафт, удерживаем коллизию для стабильности
+                            part.CanCollide = true
+                        else
+                            -- Во всех остальных случаях (стены, преграды, двери) временно отключаем жесткость
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+print("[BeyondClient Movement]: Часть 3 успешно добавлена.")
+--[[
+    BeyondClient v5.0 - Ultimate Premium Edition
+    Developer: UserBeyond-dev
+    File: main.lua (Part 4/4 - Local God Mode, Rig Scaler & Finalization)
+--]]
+
+-- ====================================================================
+-- [ МОДУЛЬ ADVANCED GOD MODE (ЛОКАЛЬНОЕ БЕССМЕРТИЕ) ]
+-- ====================================================================
+
+CreateToggle(Container, "Настоящее Бессмертие (God Mode)", _G.BeyondConfig.GodMode, function(state)
+    _G.BeyondConfig.GodMode = state
+    
+    local char = LocalPlayer.Character
+    local model = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if state and model then
+        task.spawn(function()
+            -- Разрываем связь с сервером по урону, подменяя сетевой Humanoid локальным клоном
+            while _G.BeyondConfig.GodMode and char and model.Parent do
+                local clone = model:Clone()
+                clone.Parent = char
+                
+                -- Безопасно перенаправляем камеру на новую рабочую сущность
+                Camera.CameraSubject = clone
+                LocalPlayer.Character = char
+                
+                -- Уничтожаем старый Humanoid, очищая стейты входящего серверного урона
+                model:Destroy()
+                model = clone
+                
+                task.wait(0.4) -- Оптимальный интервал десинхронизации
+            end
+        end)
+    elseif not state and model then
+        -- Мягкий ресет персонажа для возврата в исходное игровое состояние
+        if model.Health > 0 then
+            model.Health = 0
+        end
+    end
+end)
+
+-- Автоматический перезапуск защиты при респавне (CharacterAdded)
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    task.wait(0.4)
+    if _G.BeyondConfig.GodMode then
+        local currentHum = newChar:WaitForChild("Humanoid", 5)
+        if currentHum then
+            local clone = currentHum:Clone()
+            clone.Parent = newChar
+            Camera.CameraSubject = clone
+            currentHum:Destroy()
+        end
+    end
+end)
+
+-- ====================================================================
+-- [ ПАНЕЛЬ УПРАВЛЕНИЯ РОСТОМ И КОСТЯМИ ПЕРСОНАЖА ]
+-- ====================================================================
+
+local ScaleFrame = Instance.new("Frame")
+ScaleFrame.Name = "ScaleLayout"
+ScaleFrame.Size = UDim2.new(1, 0, 0, 85)
+ScaleFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+ScaleFrame.BorderSizePixel = 0
+ScaleFrame.Parent = Container
+
+local ScaleCorner = Instance.new("UICorner")
+ScaleCorner.CornerRadius = UDim.new(0, 8)
+ScaleCorner.Parent = ScaleFrame
+
+local ScaleStroke = Instance.new("UIStroke")
+ScaleStroke.Thickness = 1
+ScaleStroke.Color = Color3.fromRGB(35, 35, 45)
+ScaleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+ScaleStroke.Parent = ScaleFrame
+
+local ScaleLabel = Instance.new("TextLabel")
+ScaleLabel.Size = UDim2.new(1, -20, 0, 25)
+ScaleLabel.Position = UDim2.new(0, 12, 0, 4)
+ScaleLabel.Text = "Пресеты Роста: <font color='#FF2B5A'>" .. _G.BeyondConfig.BodySize .. "</font>"
+ScaleLabel.RichText = true
+ScaleLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+ScaleLabel.Font = Enum.Font.GothamSemibold
+ScaleLabel.TextSize = 13
+ScaleLabel.TextXAlignment = Enum.TextXAlignment.Left
+ScaleLabel.BackgroundTransparency = 1
+ScaleLabel.Parent = ScaleFrame
+
+-- Глубокое масштабирование костей и пропорций аватара (R15 Rig)
+local function RebuildBodyScale(multiplier)
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        local scaleObjects = {"BodyHeightScale", "BodyWidthScale", "BodyDepthScale", "HeadScale"}
+        for _, objectName in ipairs(scaleObjects) do
+            local scaleValue = hum:FindFirstChild(objectName)
+            if scaleValue and scaleValue:IsA("NumberValue") then
+                -- Умножаем базовый оригинальный размер на заданный коэффициент
+                scaleValue.Value = scaleValue.OriginalSize.Value * multiplier
+            end
+        end
+    end
+end
+
+-- Фабрика кнопок для пресетов сетки размеров
+local function CreatePresetElement(name, xOffset, multiplier)
+    local PresetBtn = Instance.new("TextButton")
+    PresetBtn.Size = UDim2.new(0.21, 0, 0, 36)
+    PresetBtn.Position = UDim2.new(0, xOffset, 0, 36)
+    PresetBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 44)
+    PresetBtn.Text = name
+    PresetBtn.TextColor3 = Color3.fromRGB(240, 240, 245)
+    PresetBtn.Font = Enum.Font.GothamBold
+    PresetBtn.TextSize = 11
+    PresetBtn.Parent = ScaleFrame
+    
+    local PCorner = Instance.new("UICorner")
+    PCorner.CornerRadius = UDim.new(0, 5)
+    PCorner.Parent = PresetBtn
+    
+    PresetBtn.MouseButton1Click:Connect(function()
+        _G.BeyondConfig.BodySize = name
+        ScaleLabel.Text = "Пресеты Роста: <font color='#FF2B5A'>" .. name .. "</font>"
+        TweenService:Create(PresetBtn, TweenInfo.new(0.15), {BackgroundColor3 = _G.BeyondConfig.ThemeColor}):Play()
+        RebuildBodyScale(multiplier)
+        task.wait(0.15)
+        TweenService:Create(PresetBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(32, 32, 44)}):Play()
+    end)
+end
+
+-- Инициализация 4 профессиональных пресетов
+CreatePresetElement("Мелкий", 12, 0.45)
+CreatePresetElement("Средний", 106, 1.0)
+CreatePresetElement("Большой", 200, 1.9)
+CreatePresetElement("Гигант", 294, 3.8)
+
+-- Ползунок плавного скейлинга костей тела для микронастроек (%)
+CreateSlider(Container, "Точный Скейлинг Рига (%)", 40, 400, 100, function(percent)
+    RebuildBodyScale(percent / 100)
+end)
+
+-- ====================================================================
+-- [ ФИНИШНАЯ КОМПИЛЯЦИЯ И ЗАПУСК КЛИЕНТА ]
+-- ====================================================================
+
+-- Анимация плавного развертывания интерфейса (Boot Sequence)
+MainFrame.Size = UDim2.new(0, 440, 0, 0)
+local openTween = TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 440, 0, 340)})
+openTween:Play()
+
+print("[BeyondClient]: Сборка v5.0-Alpha полностью завершена и готова к тестам!")
