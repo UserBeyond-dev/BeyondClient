@@ -3,192 +3,204 @@ local T = game:GetService("TweenService")
 local U = game:GetService("UserInputService")
 local R = game:GetService("RunService")
 local L = P.LocalPlayer
-
-if _G.HubActive then _G.HubActive = false task.wait(0.1) end
-_G.HubActive = true
-
-local old = L.PlayerGui:FindFirstChild("ZeroTwoConsoleHub")
+if _G.ZeroTwoActive then _G.ZeroTwoActive = false task.wait(0.2) end
+_G.ZeroTwoActive = true
+local old = L.PlayerGui:FindFirstChild("ZeroTwoPremiumHub")
 if old then old:Destroy() end
-
 local SG = Instance.new("ScreenGui", L.PlayerGui)
-SG.Name = "ZeroTwoConsoleHub"
+SG.Name = "ZeroTwoPremiumHub"
 SG.IgnoreGuiInset = true
-
-local BL = Color3.fromRGB(0, 150, 255) 
-local BK = Color3.fromRGB(10, 10, 12)  
-local WH = Color3.fromRGB(240, 240, 245)
-local PINK = Color3.fromRGB(255, 155, 180) 
-local RED_HORN = Color3.fromRGB(220, 40, 40)
-
-local St = {Speed = 16, Jump = false, Gh = false, AutoFarm = false, Stealth = false}
-local cW, origStats = {}, {}
-
+local BL = Color3.fromRGB(0, 150, 255)
+local BK = Color3.fromRGB(12, 12, 14)
+local WH = Color3.fromRGB(255, 255, 255)
+local St = {Speed = 16, Jump = false, Gh = false, God = false, Scale = 1, SizeMenu = false}
+local cW = {}
 local AT = Instance.new("Frame", SG)
 AT.Size = UDim2.new(0, 80, 0, 80)
 AT.Position = UDim2.new(0.05, 0, 0.2, 0)
 AT.BackgroundColor3 = BK; AT.BorderColor3 = BL; AT.BorderSizePixel = 2; AT.Active = true
-
-local HairBack = Instance.new("Frame", AT)
-HairBack.Size = UDim2.new(0.9, 0, 0.85, 0)
-HairBack.Position = UDim2.new(0.05, 0, 0.1, 0)
-HairBack.BackgroundColor3 = PINK; HairBack.BorderSizePixel = 0; HairBack.ZIndex = 1
-
-local Face = Instance.new("Frame", AT)
-Face.Size = UDim2.new(0.65, 0, 0.55, 0)
-Face.Position = UDim2.new(0.175, 0, 0.35, 0)
-Face.BackgroundColor3 = Color3.fromRGB(255, 230, 215); Face.BorderSizePixel = 0; Face.ZIndex = 1
-
-local Bangs = Instance.new("Frame", AT)
-Bangs.Size = UDim2.new(0.65, 0, 0.15, 0)
-Bangs.Position = UDim2.new(0.175, 0, 0.3, 0)
-Bangs.BackgroundColor3 = PINK; Bangs.BorderSizePixel = 0; Bangs.ZIndex = 1
-
-local WhiteBand = Instance.new("Frame", AT)
-WhiteBand.Size = UDim2.new(0.6, 0, 0.05, 0)
-WhiteBand.Position = UDim2.new(0.2, 0, 0.27, 0)
-WhiteBand.BackgroundColor3 = WH; WhiteBand.BorderSizePixel = 0; WhiteBand.ZIndex = 1
-
-local HornL = Instance.new("Frame", AT)
-HornL.Size = UDim2.new(0.08, 0, 0.18, 0)
-HornL.Position = UDim2.new(0.22, 0, 0.1, 0)
-HornL.BackgroundColor3 = RED_HORN; HornL.BorderSizePixel = 0; HornL.ZIndex = 1
-
-local HornR = Instance.new("Frame", AT)
-HornR.Size = UDim2.new(0.08, 0, 0.18, 0)
-HornR.Position = UDim2.new(0.7, 0, 0.1, 0)
-HornR.BackgroundColor3 = RED_HORN; HornR.BorderSizePixel = 0; HornR.ZIndex = 1
-
-local EyeL = Instance.new("Frame", Face)
-EyeL.Size = UDim2.new(0.24, 0, 0.35, 0)
-EyeL.Position = UDim2.new(0.12, 0, 0.25, 0)
-EyeL.BackgroundColor3 = Color3.fromRGB(40, 180, 185); EyeL.BorderSizePixel = 0; EyeL.ZIndex = 1
-
-local EyeR = Instance.new("Frame", Face)
-EyeR.Size = UDim2.new(0.24, 0, 0.35, 0)
-EyeR.Position = UDim2.new(0.64, 0, 0.25, 0)
-EyeR.BackgroundColor3 = Color3.fromRGB(40, 180, 185); EyeR.BorderSizePixel = 0; EyeR.ZIndex = 1
-
-local Mouth = Instance.new("Frame", Face)
-Mouth.Size = UDim2.new(0.35, 0, 0.25, 0)
-Mouth.Position = UDim2.new(0.325, 0, 0.65, 0)
-Mouth.BackgroundColor3 = Color3.fromRGB(240, 100, 110); Mouth.BorderSizePixel = 0; Mouth.ZIndex = 1
-Instance.new("UICorner", Mouth).CornerRadius = UDim.new(0, 6)
-
-local ToothL = Instance.new("Frame", Mouth)
-ToothL.Size = UDim2.new(0.15, 0, 0.2, 0)
-ToothL.Position = UDim2.new(0.1, 0, 0, 0)
-ToothL.BackgroundColor3 = WH; ToothL.BorderSizePixel = 0; ToothL.ZIndex = 2
-
-local ToothR = Instance.new("Frame", Mouth)
-ToothR.Size = UDim2.new(0.15, 0, 0.2, 0)
-ToothR.Position = UDim2.new(0.75, 0, 0, 0)
-ToothR.BackgroundColor3 = WH; ToothR.BorderSizePixel = 0; ToothR.ZIndex = 2
-
+local Img = Instance.new("ImageLabel", AT)
+Img.Size = UDim2.new(0.9, 0, 0.9, 0)
+Img.Position = UDim2.new(0.05, 0, 0.05, 0)
+Img.BackgroundTransparency = 1
+Img.Image = "rbxassetid://114254245648192"
 local TB = Instance.new("TextButton", AT)
 TB.Size = UDim2.new(1, 0, 1, 0)
 TB.BackgroundTransparency = 1; TB.Text = ""; TB.ZIndex = 100
-
 local MM = Instance.new("Frame", SG)
-MM.Size = UDim2.new(0.50, 0, 0.80, 0)
+MM.Size = UDim2.new(0.48, 0, 0.85, 0)
 MM.Position = UDim2.new(0.5, 0, 0.5, 0)
 MM.AnchorPoint = Vector2.new(0.5, 0.5)
 MM.BackgroundColor3 = BK; MM.BorderColor3 = BL; MM.BorderSizePixel = 4; MM.Visible = false; MM.Active = true; MM.ZIndex = 10
-
-local Ly = Instance.new("UIListLayout", MM)
-Ly.Padding = UDim.new(0, 6)
+local ContentFrame = Instance.new("Frame", MM)
+ContentFrame.Size = UDim2.new(1, 0, 0.82, 0)
+ContentFrame.Position = UDim2.new(0, 0, 0.09, 0)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.ZIndex = 11
+local Ly = Instance.new("UIListLayout", ContentFrame)
+Ly.Padding = UDim.new(0, 5)
 Ly.HorizontalAlignment, Ly.VerticalAlignment = Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top
-
-local function drag(frame, trigger)
-	local tr = trigger or frame; local d, di, ds, sp
-	tr.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; ds = i.Position; sp = frame.Position end end)
-	tr.InputChanged:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then di = i end end)
+local TopBar = Instance.new("Frame", MM) TopBar.Size = UDim2.new(1, 0, 0, 35) TopBar.BackgroundColor3 = Color3.fromRGB(18, 18, 22); TopBar.ZIndex = 12
+local BottomBar = Instance.new("Frame", MM) BottomBar.Size = UDim2.new(1, 0, 0, 25) BottomBar.Position = UDim2.new(0, 0, 1, -25) BottomBar.BackgroundColor3 = Color3.fromRGB(18, 18, 22); BottomBar.ZIndex = 12
+local function makeDraggable(frame, trigger)
+	local d, di, ds, sp
+	trigger.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; ds = i.Position; sp = frame.Position end end)
+	trigger.InputChanged:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then di = i end end)
 	R.RenderStepped:Connect(function() if d and di then local dl = di.Position - ds; frame.Position = UDim2.new(sp.X.Scale, sp.X.Offset + dl.X, sp.Y.Scale, sp.Y.Offset + dl.Y) end end)
 	U.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = false end end)
-end drag(AT, TB); drag(MM)
-
-local Bar = Instance.new("Frame", MM) Bar.Size = UDim2.new(0.95, 0, 0, 40) Bar.BackgroundTransparency = 1; Bar.ZIndex = 11
-local Title = Instance.new("TextLabel", Bar) Title.Size = UDim2.new(0.6, 0, 1, 0) Title.Text = "USERBEYOND // DEV_CONSOLE_v3.0" Title.TextColor3 = BL; Title.TextSize = 13; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Font = Enum.Font.Code; Title.ZIndex = 11
-local Cl = Instance.new("TextButton", Bar) Cl.Size = UDim2.new(0, 35, 0, 35) Cl.Position = UDim2.new(1, -35, 0, 2) Cl.BackgroundColor3 = Color3.fromRGB(180, 40, 40) Cl.Text = "X" Cl.TextColor3 = WH; Cl.ZIndex = 12; Instance.new("UICorner", Cl)
-local Mn = Instance.new("TextButton", Bar) Mn.Size = UDim2.new(0, 35, 0, 35) Mn.Position = UDim2.new(1, -75, 0, 2) Mn.BackgroundColor3 = Color3.fromRGB(60, 60, 60) Mn.Text = "—" Mn.TextColor3 = WH; Mn.ZIndex = 12; Instance.new("UICorner", Mn)
-local function cB(t)
-	local b = Instance.new("TextButton", MM) b.Size = UDim2.new(0.94, 0, 0, 36) b.BackgroundColor3 = Color3.fromRGB(22, 22, 26) b.BorderColor3 = Color3.fromRGB(40, 40, 40) b.Text = ">> " .. t .. " [ВЫКЛ]" b.TextColor3 = WH; b.TextSize = 12; b.Font = Enum.Font.Code; b.TextXAlignment = Enum.TextXAlignment.Left; b.ZIndex = 11; Instance.new("UICorner", b) return b
 end
-local bSp = cB("Скорость Бега (Постоянный Форс)")
-local bJm = cB("Бесконечный Прыжок (Взлет в воздух)")
-local bGh = cB("Проход Сквозь Все Стены (Noclip Mode)")
-local bFm = cB("Сверх-Фарм Опыта и Силы (Млн EXP/мс)")
-local bSth = cB("Анонимность (Скрыть Ник и Топ Лидеров)")
-
-local SliderFrame = Instance.new("Frame", MM) SliderFrame.Size = UDim2.new(0.94, 0, 0, 35) SliderFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26) SliderFrame.ZIndex = 11; Instance.new("UICorner", SliderFrame)
-local SliderText = Instance.new("TextLabel", SliderFrame) SliderText.Size = UDim2.new(0.4, 0, 1, 0) SliderText.BackgroundTransparency = 1; SliderText.Text = "Скорость: 35" SliderText.TextColor3 = WH; SliderText.TextSize = 11; SliderText.ZIndex = 12; SliderText.Font = Enum.Font.Code
-local SliderBar = Instance.new("Frame", SliderFrame) SliderBar.Size = UDim2.new(0.55, 0, 0, 8) SliderBar.Position = UDim2.new(0.4, 0, 0.4, 0) SliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50); SliderBar.ZIndex = 12
-local SliderButton = Instance.new("TextButton", SliderBar) SliderButton.Size = UDim2.new(0, 16, 0, 16) SliderButton.Position = UDim2.new(0.1, 0, -0.5, 0) SliderButton.BackgroundColor3 = BL; SliderButton.Text = ""; SliderButton.ZIndex = 13; Instance.new("UICorner", SliderButton)
-
-local sliderDragging = false
-SliderButton.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliderDragging = true end end)
-U.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliderDragging = false end end)
+makeDraggable(AT, TB)
+makeDraggable(MM, TopBar)
+makeDraggable(MM, BottomBar)
+local Title = Instance.new("TextLabel", TopBar) Title.Size = UDim2.new(0.6, 0, 1, 0) Title.Position = UDim2.new(0.03, 0, 0, 0) Title.Text = "BEYOND CLIENT v4.0" Title.TextColor3 = BL; Title.TextSize = 13; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Font = Enum.Font.Code; Title.ZIndex = 13
+local Cl = Instance.new("TextButton", TopBar) Cl.Size = UDim2.new(0, 30, 0, 30) Cl.Position = UDim2.new(1, -35, 0, 2) Cl.BackgroundColor3 = Color3.fromRGB(180, 40, 40) Cl.Text = "X" Cl.TextColor3 = WH; Cl.ZIndex = 14; Instance.new("UICorner", Cl)
+local Mn = Instance.new("TextButton", TopBar) Mn.Size = UDim2.new(0, 30, 0, 30) Mn.Position = UDim2.new(1, -70, 0, 2) Mn.BackgroundColor3 = Color3.fromRGB(60, 60, 60) Mn.Text = "—" Mn.TextColor3 = WH; Mn.ZIndex = 14; Instance.new("UICorner", Mn)
+local function cB(t)
+	local b = Instance.new("TextButton", ContentFrame) b.Size = UDim2.new(0.94, 0, 0, 35) b.BackgroundColor3 = Color3.fromRGB(22, 22, 26) b.Text = t b.TextColor3 = WH; b.TextSize = 13; b.Font = Enum.Font.SourceSansBold; b.ZIndex = 12; Instance.new("UICorner", b) return b
+end
+local bSp = cB("Бег [ВЫКЛ]")
+local bJm = cB("Бесконечный Прыжок [ВЫКЛ]")
+local bGh = cB("Стены-Призраки [ВЫКЛ]")
+local bGd = cB("Бессмертие [ВЫКЛ]")
+local bSz = cB("Размер тела >>")
+local SFrame = Instance.new("Frame", ContentFrame) SFrame.Size = UDim2.new(0.94, 0, 0, 32) SFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26) SFrame.ZIndex = 12; Instance.new("UICorner", SFrame)
+local SText = Instance.new("TextLabel", SFrame) SText.Size = UDim2.new(0.35, 0, 1, 0) SText.BackgroundTransparency = 1; SText.Text = "Скорость: 16" SText.TextColor3 = WH; SText.TextSize = 11; SText.ZIndex = 13; SText.Font = Enum.Font.Code
+local SBar = Instance.new("Frame", SFrame) SBar.Size = UDim2.new(0.58, 0, 0, 6) SBar.Position = UDim2.new(0.38, 0, 0.4, 0) SBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50); SBar.ZIndex = 13
+local SButton = Instance.new("TextButton", SBar) SButton.Size = UDim2.new(0, 14, 0, 14) SButton.Position = UDim2.new(0, 0, -0.5, 0) SButton.BackgroundColor3 = BL; SButton.Text = ""; SButton.ZIndex = 14; Instance.new("UICorner", SButton)
+local sDrag = false
+SButton.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sDrag = true end end)
+U.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sDrag = false end end)
+R.RenderStepped:Connect(function() if sDrag then local percentage = math.clamp((U:GetMouseLocation().X - SBar.AbsolutePosition.X) / SBar.AbsoluteSize.X, 0, 1) SButton.Position = UDim2.new(percentage, -7, -0.5, 0) St.Speed = math.floor(16 + (percentage * 284)) SText.Text = "Скорость: " .. tostring(St.Speed) end end)
+local SizeSubFrame = Instance.new("Frame", ContentFrame) SizeSubFrame.Size = UDim2.new(0.94, 0, 0, 75) SizeSubFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32) SizeSubFrame.Visible = false; SizeSubFrame.ZIndex = 12; Instance.new("UICorner", SizeSubFrame)
+local SzGrid = Instance.new("UIGridLayout", SizeSubFrame) SzGrid.CellSize = UDim2.new(0.23, 0, 0, 30) SzGrid.Padding = UDim2.new(0, 4, 0, 4) SzGrid.HorizontalAlignment, SzGrid.VerticalAlignment = Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
+local function cSzB(t, val)
+	local b = Instance.new("TextButton", SizeSubFrame) b.BackgroundColor3 = Color3.fromRGB(45, 45, 50) b.Text = t; b.TextColor3 = WH; b.TextSize = 10; b.ZIndex = 13; Instance.new("UICorner", b)
+	b.MouseButton1Click:Connect(function() St.Scale = val end) return b
+end
+cSzB("Мелкий", 0.3) cSzB("Средний", 1) cSzB("Большой", 2.5) cSzB("Гигант", 5)
+local SizeSliderFrame = Instance.new("Frame", ContentFrame) SizeSliderFrame.Size = UDim2.new(0.94, 0, 0, 32) SizeSliderFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26) SizeSliderFrame.ZIndex = 12; Instance.new("UICorner", SizeSliderFrame)
+local SizeSliderText = Instance.new("TextLabel", SizeSliderFrame) SizeSliderText.Size = UDim2.new(0.35, 0, 1, 0) SizeSliderText.BackgroundTransparency = 1; SizeSliderText.Text = "Рост: 1.0" SizeSliderText.TextColor3 = WH; SizeSliderText.TextSize = 11; SizeSliderText.ZIndex = 13; SizeSliderText.Font = Enum.Font.Code
+local SizeSliderBar = Instance.new("Frame", SizeSliderFrame) SizeSliderBar.Size = UDim2.new(0.58, 0, 0, 6) SizeSliderBar.Position = UDim2.new(0.38, 0, 0.4, 0) SizeSliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50); SizeSliderBar.ZIndex = 13
+local SizeSliderButton = Instance.new("TextButton", SizeSliderBar) SizeSliderButton.Size = UDim2.new(0, 14, 0, 14) SizeSliderButton.Position = UDim2.new(0.1, 0, -0.5, 0) SizeSliderButton.BackgroundColor3 = BL; SizeSliderButton.Text = ""; SizeSliderButton.ZIndex = 14; Instance.new("UICorner", SizeSliderButton)
+local szDrag = false
+SizeSliderButton.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then szDrag = true end end)
+U.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then szDrag = false end end)
+R.RenderStepped:Connect(function() if szDrag then local percentage = math.clamp((U:GetMouseLocation().X - SizeSliderBar.AbsolutePosition.X) / SizeSliderBar.AbsoluteSize.X, 0, 1) SizeSliderButton.Position = UDim2.new(percentage, -7, -0.5, 0) St.Scale = 0.2 + (percentage * 5.8) SizeSliderText.Text = "Рост: " .. string.format("%.1f", St.Scale) end end)
+TB.TouchTap:Connect(function() AT.Visible = false; MM.Visible = true end)
+Mn.TouchTap:Connect(function() MM.Visible = false; AT.Visible = true end)
 R.RenderStepped:Connect(function()
-	if sliderDragging then
-		local mousePos = U:GetMouseLocation().X; local barGlobalPos = SliderBar.AbsolutePosition.X; local barWidth = SliderBar.AbsoluteSize.X
-		local percentage = math.clamp((mousePos - barGlobalPos) / barWidth, 0, 1)
-		SliderButton.Position = UDim2.new(percentage, -8, -0.5, 0)
-		St.Speed = math.floor(16 + (percentage * (300 - 16)))
-		SliderText.Text = "Скорость: " .. tostring(St.Speed)
+	local char = L.Character; local root = char and char:FindFirstChild("HumanoidRootPart")
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if St.Speed > 16 and root and hum and hum.MoveDirection.Magnitude > 0 and _G.ZeroTwoActive then
+		local dir = hum.MoveDirection.Unit
+		root.AssemblyLinearVelocity = Vector3.new(dir.X * St.Speed, root.AssemblyLinearVelocity.Y, dir.Z * St.Speed)
+	end
+	if hum and _G.ZeroTwoActive then
+		local hs = hum:FindFirstChild("HeadScale") if hs then hs.Value = St.Scale end
+		local bds = hum:FindFirstChild("BodyDepthScale") if bds then bds.Value = St.Scale end
+		local bws = hum:FindFirstChild("BodyWidthScale") if bws then bws.Value = St.Scale end
+		local bhs = hum:FindFirstChild("BodyHeightScale") if bhs then bhs.Value = St.Scale end
+	end
+end)
+bSp.MouseButton1Click:Connect(function() if St.Speed == 16 then St.Speed = 45; bSp.Text = "Бег [ВКЛ]" bSp.BackgroundColor3 = Color3.fromRGB(0, 150, 100) else St.Speed = 16; bSp.Text = "Бег [ВЫКЛ]" bSp.BackgroundColor3 = Color3.fromRGB(22, 22, 26) end end)
+bJm.MouseButton1Click:Connect(function() St.Jump = not St.Jump; bJm.Text = St.Jump and "Бесконечный Прыжок [ВКЛ]" or "Бесконечный Прыжок [ВЫКЛ]" bJm.BackgroundColor3 = St.Jump and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(22, 22, 26) end)
+U.JumpRequest:Connect(function() local root = L.Character and L.Character:FindFirstChild("HumanoidRootPart") if St.Jump and root and _G.ZeroTwoActive then root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, 55, root.AssemblyLinearVelocity.Z) end end)
+bGh.MouseButton1Click:Connect(function() St.Gh = not St.Gh; bGh.Text = St.Gh and "Стены-Призраки [ВКЛ]" or "Стены-Призраки [ВЫКЛ]" bGh.BackgroundColor3 = St.Gh and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(22, 22, 26)
+	if St.Gh then for _, o in ipairs(workspace:GetDescendants()) do if o:IsA("BasePart") and o.Name:lower() ~= "floor" and o.Name:lower() ~= "baseplate" and not o:IsDescendantOf(L.Character) then cW[o] = {C = o.CanCollide, T = o.Transparency} o.CanCollide = false; o.Transparency = 0.60 end end
+	else for p, g in pairs(cW) do if p and p.Parent then p.CanCollide = g.C; p.Transparency = g.T end end table.clear(cW) end
+end)
+bGd.MouseButton1Click:Connect(function() St.God = not St.God; bGd.Text = St.God and "Бессмертие [ВКЛ]" or "Бессмертие [ВЫКЛ]" bGd.BackgroundColor3 = St.God and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(22, 22, 26)
+	if St.God then local char = L.Character; local hum = char and char:FindFirstChildOfClass("Humanoid") if hum then local clone = hum:Clone() hum:Destroy() clone.Parent = char game:Workspace.CurrentCamera.CameraSubject = clone end end
+end)
+bSz.MouseButton1Click:Connect(function() St.SizeMenu = not St.SizeMenu; SizeSubFrame.Visible = St.SizeMenu; bSz.Text = St.SizeMenu and "Размер тела <<" or "Размер тела >>" end)
+local function cB(t)
+	local b = Instance.new("TextButton", ContentFrame) b.Size = UDim2.new(0.94, 0, 0, 35) b.BackgroundColor3 = Color3.fromRGB(22, 22, 26) b.Text = t b.TextColor3 = WH; b.TextSize = 13; b.Font = Enum.Font.SourceSansBold; b.ZIndex = 12; Instance.new("UICorner", b) return b
+end
+
+local bSp = cB("Бег [ВЫКЛ]")
+local bJm = cB("Бесконечный Прыжок [ВЫКЛ]")
+local bGh = cB("Стены-Призраки [ВЫКЛ]")
+local bGd = cB("Бессмертие [ВЫКЛ]")
+local bSz = cB("Размер тела >>")
+
+local SFrame = Instance.new("Frame", ContentFrame) SFrame.Size = UDim2.new(0.94, 0, 0, 32) SFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26) SFrame.ZIndex = 12; Instance.new("UICorner", SFrame)
+local SText = Instance.new("TextLabel", SFrame) SText.Size = UDim2.new(0.35, 0, 1, 0) SText.BackgroundTransparency = 1; SText.Text = "Скорость: 16" SText.TextColor3 = WH; SText.TextSize = 11; SText.ZIndex = 13; SText.Font = Enum.Font.Code
+local SBar = Instance.new("Frame", SFrame) SBar.Size = UDim2.new(0.58, 0, 0, 6) SBar.Position = UDim2.new(0.38, 0, 0.4, 0) SBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50); SBar.ZIndex = 13
+local SButton = Instance.new("TextButton", SBar) SButton.Size = UDim2.new(0, 14, 0, 14) SButton.Position = UDim2.new(0, 0, -0.5, 0) SButton.BackgroundColor3 = BL; SButton.Text = ""; SButton.ZIndex = 14; Instance.new("UICorner", SButton)
+
+local sDrag = false
+SButton.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sDrag = true end end)
+U.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sDrag = false end end)
+R.RenderStepped:Connect(function()
+	if sDrag then
+		local percentage = math.clamp((U:GetMouseLocation().X - SBar.AbsolutePosition.X) / SBar.AbsoluteSize.X, 0, 1)
+		SButton.Position = UDim2.new(percentage, -7, -0.5, 0)
+		St.Speed = math.floor(16 + (percentage * 284))
+		SText.Text = "Скорость: " .. tostring(St.Speed)
+	end
+end)
+
+local SizeSubFrame = Instance.new("Frame", ContentFrame) SizeSubFrame.Size = UDim2.new(0.94, 0, 0, 75) SizeSubFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32) SizeSubFrame.Visible = false; SizeSubFrame.ZIndex = 12; Instance.new("UICorner", SizeSubFrame)
+local SzGrid = Instance.new("UIGridLayout", SizeSubFrame) SzGrid.CellSize = UDim2.new(0.23, 0, 0, 30) SzGrid.Padding = UDim2.new(0, 4, 0, 4) SzGrid.HorizontalAlignment, SzGrid.VerticalAlignment = Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
+
+local function cSzB(t, val)
+	local b = Instance.new("TextButton", SizeSubFrame) b.BackgroundColor3 = Color3.fromRGB(45, 45, 50) b.Text = t; b.TextColor3 = WH; b.TextSize = 10; b.ZIndex = 13; Instance.new("UICorner", b)
+	b.MouseButton1Click:Connect(function() St.Scale = val end) return b
+end
+cSzB("Мелкий", 0.3) cSzB("Средний", 1) cSzB("Большой", 2.5) cSzB("Гигант", 5)
+local SizeSliderFrame = Instance.new("Frame", ContentFrame) SizeSliderFrame.Size = UDim2.new(0.94, 0, 0, 32) SizeSliderFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26) SizeSliderFrame.ZIndex = 12; Instance.new("UICorner", SizeSliderFrame)
+local SizeSliderText = Instance.new("TextLabel", SizeSliderFrame) SizeSliderText.Size = UDim2.new(0.35, 0, 1, 0) SizeSliderText.BackgroundTransparency = 1; SizeSliderText.Text = "Рост: 1.0" SizeSliderText.TextColor3 = WH; SizeSliderText.TextSize = 11; SizeSliderText.ZIndex = 13; SizeSliderText.Font = Enum.Font.Code
+local SizeSliderBar = Instance.new("Frame", SizeSliderFrame) SizeSliderBar.Size = UDim2.new(0.58, 0, 0, 6) SizeSliderBar.Position = UDim2.new(0.38, 0, 0.4, 0) SizeSliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50); SizeSliderBar.ZIndex = 13
+local SizeSliderButton = Instance.new("TextButton", SizeSliderBar) SizeSliderButton.Size = UDim2.new(0, 14, 0, 14) SizeSliderButton.Position = UDim2.new(0.1, 0, -0.5, 0) SizeSliderButton.BackgroundColor3 = BL; SizeSliderButton.Text = ""; SizeSliderButton.ZIndex = 14; Instance.new("UICorner", SizeSliderButton)
+
+local szDrag = false
+SizeSliderButton.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then szDrag = true end end)
+U.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then szDrag = false end end)
+R.RenderStepped:Connect(function()
+	if szDrag then
+		local percentage = math.clamp((U:GetMouseLocation().X - SizeSliderBar.AbsolutePosition.X) / SizeSliderBar.AbsoluteSize.X, 0, 1)
+		SizeSliderButton.Position = UDim2.new(percentage, -7, -0.5, 0)
+		St.Scale = 0.2 + (percentage * 5.8)
+		SizeSliderText.Text = "Рост: " .. string.format("%.1f", St.Scale)
 	end
 end)
 
 TB.TouchTap:Connect(function() AT.Visible = false; MM.Visible = true end)
-TB.MouseButton1Click:Connect(function() AT.Visible = false; MM.Visible = true end)
 Mn.TouchTap:Connect(function() MM.Visible = false; AT.Visible = true end)
-Mn.MouseButton1Click:Connect(function() MM.Visible = false; AT.Visible = true end)
 
-R.RenderStepped:Connect(function() if St.Speed > 16 and _G.HubActive then local c = L.Character; local h = c and c:FindFirstChildOfClass("Humanoid") if h then h.WalkSpeed = St.Speed end end end)
-bSp.MouseButton1Click:Connect(function() if St.Speed == 16 then St.Speed = 35; bSp.Text = ">> Скорость Бега [АКТИВЕН]" bSp.BackgroundColor3 = Color3.fromRGB(0, 80, 150) else St.Speed = 16; bSp.Text = ">> Скорость Бега (Постоянный Форс)" bSp.BackgroundColor3 = Color3.fromRGB(22, 22, 26) end end)
+R.RenderStepped:Connect(function()
+	local char = L.Character; local root = char and char:FindFirstChild("HumanoidRootPart")
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if St.Speed > 16 and root and hum and hum.MoveDirection.Magnitude > 0 and _G.ZeroTwoActive then
+		local dir = hum.MoveDirection.Unit
+		root.AssemblyLinearVelocity = Vector3.new(dir.X * St.Speed, root.AssemblyLinearVelocity.Y, dir.Z * St.Speed)
+	end
+	if hum and _G.ZeroTwoActive then
+		local hs = hum:FindFirstChild("HeadScale") if hs then hs.Value = St.Scale end
+		local bds = hum:FindFirstChild("BodyDepthScale") if bds then bds.Value = St.Scale end
+		local bws = hum:FindFirstChild("BodyWidthScale") if bws then bws.Value = St.Scale end
+		local bhs = hum:FindFirstChild("BodyHeightScale") if bhs then bhs.Value = St.Scale end
+	end
+end)
 
-bJm.MouseButton1Click:Connect(function() St.Jump = not St.Jump; bJm.Text = St.Jump and ">> Бесконечный Прыжок [ВКЛ]" or ">> Бесконечный Прыжок (Взлет в воздух)" bJm.BackgroundColor3 = St.Jump and Color3.fromRGB(0, 80, 150) or Color3.fromRGB(22, 22, 26) end)
-U.JumpRequest:Connect(function() local c = L.Character; local h = c and c:FindFirstChildOfClass("Humanoid") if St.Jump and h and _G.HubActive then h:ChangeState(Enum.HumanoidStateType.Jumping) end end)
+bSp.MouseButton1Click:Connect(function() if St.Speed == 16 then St.Speed = 45; bSp.Text = "Бег [ВКЛ]" bSp.BackgroundColor3 = Color3.fromRGB(0, 150, 100) else St.Speed = 16; bSp.Text = "Бег [ВЫКЛ]" bSp.BackgroundColor3 = Color3.fromRGB(22, 22, 26) end end)
+bJm.MouseButton1Click:Connect(function() St.Jump = not St.Jump; bJm.Text = St.Jump and "Бесконечный Прыжок [ВКЛ]" or "Бесконечный Прыжок [ВЫКЛ]" bJm.BackgroundColor3 = St.Jump and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(22, 22, 26) end)
+U.JumpRequest:Connect(function() local root = L.Character and L.Character:FindFirstChild("HumanoidRootPart") if St.Jump and root and _G.ZeroTwoActive then root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, 55, root.AssemblyLinearVelocity.Z) end end)
 
-local function isF(p) if p.Name:lower():find("floor") or p.Name:lower():find("baseplate") then return true end return p.CFrame.UpVector.Y > 0.9 and p.Size.X > 10 end
-bGh.MouseButton1Click:Connect(function() St.Gh = not St.Gh; bGh.Text = St.Gh and ">> Проход Сквозь Все Стены [АКТИВЕН]" or ">> Проход Сквозь Все Стены (Noclip Mode)" bGh.BackgroundColor3 = St.Gh and Color3.fromRGB(0, 80, 150) or Color3.fromRGB(22, 22, 26)
-	if St.Gh then for _, o in ipairs(workspace:GetDescendants()) do if o:IsA("BasePart") and not isF(o) and not o:IsDescendantOf(L.Character) then cW[o] = {C = o.CanCollide, T = o.Transparency} o.CanCollide = false; o.Transparency = 0.60 end end
+bGh.MouseButton1Click:Connect(function() St.Gh = not St.Gh; bGh.Text = St.Gh and "Стены-Призраки [ВКЛ]" or "Стены-Призраки [ВЫКЛ]" bGh.BackgroundColor3 = St.Gh and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(22, 22, 26)
+	if St.Gh then for _, o in ipairs(workspace:GetDescendants()) do if o:IsA("BasePart") and o.Name:lower() ~= "floor" and o.Name:lower() ~= "baseplate" and not o:IsDescendantOf(L.Character) then cW[o] = {C = o.CanCollide, T = o.Transparency} o.CanCollide = false; o.Transparency = 0.60 end end
 	else for p, g in pairs(cW) do if p and p.Parent then p.CanCollide = g.C; p.Transparency = g.T end end table.clear(cW) end
 end)
 
-local remoteCache = {}
-local function updateRemoteCache()
-	table.clear(remoteCache)
-	for _, v in ipairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
-		if v:IsA("RemoteEvent") and (v.Name:lower():find("kill") or v.Name:lower():find("reward") or v.Name:lower():find("hit") or v.Name:lower():find("weapon")) then table.insert(remoteCache, v) end
-	end
-end
-
-task.spawn(function()
-	while task.wait(0.001) do 
-		if St.AutoFarm and _G.HubActive then
-			for _, remote in ipairs(remoteCache) do if remote and remote.Parent then remote:FireServer("Mob", true) remote:FireServer() end end
-			local leader = L:FindFirstChild("leaderstat") or L:FindFirstChild("leaderstats")
-			if leader then for _, stat in ipairs(leader:GetChildren()) do if stat.Name:lower():find("exp") or stat.Name:lower():find("опыт") or stat.Name:lower():find("lvl") or stat.Name:lower():find("power") or stat.Name:lower():find("сила") then stat.Value = stat.Value + 250000 end end end
+bGd.MouseButton1Click:Connect(function() St.God = not St.God; bGd.Text = St.God and "Бессмертие [ВКЛ]" or "Бессмертие [ВЫКЛ]" bGd.BackgroundColor3 = St.God and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(22, 22, 26)
+	if St.God then
+		local char = L.Character; local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			local clone = hum:Clone() hum:Destroy() clone.Parent = char
+			game:Workspace.CurrentCamera.CameraSubject = clone
 		end
 	end
 end)
-bFm.MouseButton1Click:Connect(function() St.AutoFarm = not St.AutoFarm; if St.AutoFarm then updateRemoteCache() end; bFm.Text = St.AutoFarm and ">> Сверх-Фарм Опыта [АКТИВЕН]" or ">> Сверх-Фарм Опыта и Силы (Млн EXP/мс)" bFm.BackgroundColor3 = St.AutoFarm and Color3.fromRGB(0, 80, 150) or Color3.fromRGB(22, 22, 26) end)
 
-task.spawn(function()
-	while task.wait(0.2) do
-		if St.Stealth and _G.HubActive then
-			local c = L.Character; if c and c:FindFirstChild("Head") and c.Head:FindFirstChildOfClass("BillboardGui") then c.Head:FindFirstChildOfClass("BillboardGui"):Destroy() end
-			local pList = game:GetService("CoreGui"):FindFirstChild("PlayerList") or L.PlayerGui:FindFirstChild("PlayerList") if pList then pList.Enabled = false end
-			local leader = L:FindFirstChild("leaderstat") or L:FindFirstChild("leaderstats")
-			if leader then for _, stat in ipairs(leader:GetChildren()) do if not origStats[stat.Name] then origStats[stat.Name] = stat.Value end stat.Value = 0 end end
-		end
-	end
-end)
-bSth.MouseButton1Click:Connect(function() St.Stealth = not St.Stealth; bSth.Text = St.Stealth and ">> Анонимность [АКТИВЕН]" or ">> Анонимность (Скрыть Ник и Топ Лидеров)" bSth.BackgroundColor3 = St.Stealth and Color3.fromRGB(0, 80, 150) or Color3.fromRGB(22, 22, 26)
-	if not St.Stealth then local pList = game:GetService("CoreGui"):FindFirstChild("PlayerList") or L.PlayerGui:FindFirstChild("PlayerList") if pList then pList.Enabled = true end local leader = L:FindFirstChild("leaderstat") or L:FindFirstChild("leaderstats") if leader then for _, stat in ipairs(leader:GetChildren()) do if origStats[stat.Name] then stat.Value = origStats[stat.Name] end end end table.clear(origStats) end
-end)
-
-Cl.MouseButton1Click:Connect(function()
-	_G.HubActive = false; task.wait(0.1)
-	for p, g in pairs(cW) do if p and p.Parent then p.CanCollide = g.C; p.Transparency = g.T end end
-	local c = L.Character; local h = c and c:FindFirstChildOfClass("Humanoid") if h then h.WalkSpeed = 16 end SG:Destroy()
-end)
+bSz.MouseButton1Click:Connect(function() St.SizeMenu = not St.SizeMenu; SizeSubFrame.Visible = St.SizeMenu; bSz.Text = St.SizeMenu and "Размер тела <<" or "Размер тела >>" end)
+Cl.MouseButton1Click:Connect(function() _G.ZeroTwoActive = false; task.wait(0.1) for p, g in pairs(cW) do if p and p.Parent then p.CanCollide = g.C; p.Transparency = g.T end end SG:Destroy() end)
