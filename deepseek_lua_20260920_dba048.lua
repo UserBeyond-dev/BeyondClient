@@ -2187,3 +2187,1311 @@ UX.stroke(AimTargetHUD, CFG.BorderHi, 1)
 print("[DW v7.0] Часть 1/2 загружена.")
 print("[DW v7.0] Вкладок создано: " .. tostring(#Tabs))
 print("[DW v7.0] Напиши 'часть 2' — я дам остаток.")
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [19/32] ГРАФИКА (UI + логика)
+-- ═══════════════════════════════════════════════════════════════════════════
+local gP = Pages["Graphics"]
+CreateSection(gP, "🎨 Продвинутая графика")
+CreateToggle(gP, "Fullbright", false, function(s)
+    CFG.Gfx.fullbright = s
+    pcall(function()
+        if s then
+            Lighting.Ambient = Color3.fromRGB(178,178,178)
+            Lighting.OutdoorAmbient = Color3.fromRGB(178,178,178)
+            Lighting.Brightness = 3
+            Lighting.ClockTime = 14
+        else
+            Lighting.Ambient = CFG.orig.amb
+            Lighting.OutdoorAmbient = CFG.orig.outAmb
+            Lighting.Brightness = CFG.orig.bright
+            Lighting.ClockTime = CFG.orig.clock
+        end
+    end)
+    PushNotify("Графика", s and "Fullbright ВКЛ" or "ВЫКЛ", s and "success" or "warn")
+end)
+CreateToggle(gP, "Отключить тени", false, function(s)
+    CFG.Gfx.noShadows = s
+    pcall(function() Lighting.GlobalShadows = not s end)
+end)
+CreateToggle(gP, "Отключить туман", false, function(s)
+    CFG.Gfx.noFog = s
+    pcall(function() Lighting.FogEnd = s and 100000 or CFG.orig.fog end)
+end)
+CreateToggle(gP, "Отключить Bloom", false, function(s)
+    CFG.Gfx.noBloom = s
+    pcall(function()
+        for _, e in ipairs(Lighting:GetChildren()) do
+            if e:IsA("BloomEffect") or e:IsA("BlurEffect") then
+                e.Enabled = not s
+            end
+        end
+    end)
+end)
+CreateToggle(gP, "Отключить частицы", false, function(s)
+    CFG.Gfx.noParticles = s
+    pcall(function()
+        for _, d in ipairs(Workspace:GetDescendants()) do
+            if d:IsA("ParticleEmitter") or d:IsA("Smoke") or d:IsA("Fire") then
+                d.Enabled = not s
+            end
+        end
+    end)
+end)
+CreateToggle(gP, "Отключить воду", false, function(s)
+    CFG.Gfx.noWater = s
+    pcall(function()
+        if Terrain then
+            Terrain.WaterWaveSize = s and 0 or 1
+            Terrain.WaterWaveSpeed = s and 0 or 1
+            Terrain.WaterTransparency = s and 1 or 0
+        end
+    end)
+end)
+CreateToggle(gP, "Simple Terrain", false, function(s)
+    CFG.Gfx.simpleTerrain = s
+    pcall(function()
+        if Terrain then
+            Terrain.Decoration = not s
+        end
+    end)
+end)
+CreateToggle(gP, "Отключить атмосферу", false, function(s)
+    CFG.Gfx.noAtmosphere = s
+    pcall(function()
+        for _, e in ipairs(Lighting:GetChildren()) do
+            if e:IsA("Atmosphere") then
+                e.Density = s and 0 or 0.3
+            end
+        end
+    end)
+end)
+
+CreateSection(gP, "🔭 FOV")
+CreateToggle(gP, "Своё FOV", false, function(s) CFG.Gfx.fovOn = s end)
+CreateSlider(gP, "Значение", 40, 120, 70, function(v) CFG.Gfx.fov = v end)
+
+task.spawn(function()
+    while Alive and task.wait(0.2) do
+        local cam = Workspace.CurrentCamera
+        if cam then
+            if CFG.Gfx.fovOn and cam.FieldOfView ~= CFG.Gfx.fov then
+                pcall(function() cam.FieldOfView = CFG.Gfx.fov end)
+            elseif not CFG.Gfx.fovOn and cam.FieldOfView ~= CFG.Gfx.origFov then
+                pcall(function() cam.FieldOfView = CFG.Gfx.origFov end)
+            end
+        end
+    end
+end)
+
+CreateSection(gP, "📏 Значения ниже стандарта")
+CreateSlider(gP, "Рендер-дистанция", 100, 2000, 1000, function(v)
+    CFG.Gfx.renderDist = v
+end)
+CreateSlider(gP, "LOD Bias", 1, 10, 1, function(v)
+    CFG.Gfx.lodBias = v
+end)
+
+CreateBtn(gP, "♻ Сбросить всю графику", Color3.fromRGB(45, 35, 35), function()
+    CFG.Gfx.fullbright = false
+    CFG.Gfx.noShadows = false
+    CFG.Gfx.noFog = false
+    CFG.Gfx.noBloom = false
+    CFG.Gfx.noParticles = false
+    CFG.Gfx.noWater = false
+    CFG.Gfx.simpleTerrain = false
+    CFG.Gfx.noAtmosphere = false
+    pcall(function()
+        Lighting.GlobalShadows = CFG.orig.shadows
+        Lighting.FogEnd = CFG.orig.fog
+        Lighting.Ambient = CFG.orig.amb
+        Lighting.OutdoorAmbient = CFG.orig.outAmb
+        Lighting.Brightness = CFG.orig.bright
+        Lighting.ClockTime = CFG.orig.clock
+        for _, e in ipairs(Lighting:GetChildren()) do
+            if e:IsA("PostEffect") then e.Enabled = true end
+        end
+    end)
+    PushNotify("Графика", "Всё сброшено", "success")
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [20/32] СЕТЬ (UI + логика)
+-- ═══════════════════════════════════════════════════════════════════════════
+local nP = Pages["Network"]
+
+local NetStats = {
+    history = {}, maxHistory = 30,
+    avgPing = 0, minPing = math.huge, maxPing = 0,
+    spikeCount = 0, lastPing = 0, lastSpike = 0,
+}
+
+task.spawn(function()
+    while Alive and task.wait(0.5) do
+        if not NetworkStats then continue end
+        pcall(function()
+            local ping = math.round(NetworkStats.ServerPing)
+            NetStats.lastPing = ping
+            table.insert(NetStats.history, ping)
+            if #NetStats.history > NetStats.maxHistory then
+                table.remove(NetStats.history, 1)
+            end
+            local sum = 0
+            for _, v in ipairs(NetStats.history) do sum = sum + v end
+            NetStats.avgPing = math.round(sum / #NetStats.history)
+            NetStats.minPing = math.min(NetStats.minPing, ping)
+            NetStats.maxPing = math.max(NetStats.maxPing, ping)
+            
+            if #NetStats.history >= 5 then
+                local prev = NetStats.history[#NetStats.history - 1]
+                if ping - prev > 100 then
+                    NetStats.spikeCount = NetStats.spikeCount + 1
+                    NetStats.lastSpike = tick()
+                    if CFG.Net.lagShield then
+                        local hrp = LocalPlayer.Character and
+                            LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if hrp then
+                            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+CreateSection(nP, "📡 Live статистика")
+local netCard = CreateCard(nP, 100)
+local netInfo = Instance.new("TextLabel", netCard)
+netInfo.Size = UDim2.new(1, -16, 1, -12)
+netInfo.Position = UDim2.new(0, 8, 0, 6)
+netInfo.BackgroundTransparency = 1
+netInfo.RichText = true
+netInfo.TextColor3 = CFG.Text
+netInfo.Font = Enum.Font.Code
+netInfo.TextSize = 11
+netInfo.TextXAlignment = Enum.TextXAlignment.Left
+netInfo.TextYAlignment = Enum.TextYAlignment.Top
+netInfo.ZIndex = 7
+
+task.spawn(function()
+    while Alive and task.wait(1) do
+        netInfo.Text = string.format(
+            "Текущий пинг: <b>%d мс</b>\n" ..
+            "Средний: <b>%d мс</b>\n" ..
+            "Мин / Макс: <b>%d / %d</b>\n" ..
+            "Спайков: <b>%d</b>",
+            NetStats.lastPing, NetStats.avgPing,
+            NetStats.minPing == math.huge and 0 or NetStats.minPing, NetStats.maxPing,
+            NetStats.spikeCount)
+    end
+end)
+
+CreateSection(nP, "🛡 Защита сети")
+CreateToggle(nP, "Lag Shield", false, function(s)
+    CFG.Net.lagShield = s
+    PushNotify("Сеть", s and "Lag Shield ВКЛ" or "ВЫКЛ", s and "success" or "warn")
+end)
+CreateToggle(nP, "Packet Guard", false, function(s) CFG.Net.packetGuard = s end)
+CreateToggle(nP, "Оптимизатор", false, function(s) CFG.Net.optimizer = s end)
+
+CreateBtn(nP, "🔄 Сбросить статистику сети", Color3.fromRGB(40, 35, 35), function()
+    NetStats.history = {}
+    NetStats.minPing = math.huge
+    NetStats.maxPing = 0
+    NetStats.spikeCount = 0
+    PushNotify("Сеть", "Сброшено", "success")
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [21/32] SPECIAL (Anti-Everything + Auto-Heal)
+-- ═══════════════════════════════════════════════════════════════════════════
+local spP = Pages["Special"]
+CreateSection(spP, "🛡 Anti-эффекты")
+CreateToggle(spP, "Anti-Stun (стан)", false, function(s) CFG.Guard.antiStun = s end)
+CreateToggle(spP, "Anti-Fling (отбрасывание)", false, function(s) CFG.Guard.antiFling = s end)
+CreateToggle(spP, "Anti-Void (бездна)", false, function(s) CFG.Guard.antiVoid = s end)
+CreateToggle(spP, "Anti-Damage (урон)", false, function(s) CFG.Guard.antiDamage = s end)
+CreateToggle(spP, "Anti-Flash (вспышки)", false, function(s)
+    CFG.Guard.antiFlash = s
+    pcall(function()
+        for _, e in ipairs(Lighting:GetChildren()) do
+            if e:IsA("ColorCorrectionEffect") then
+                if s then
+                    e.Brightness = 0
+                    e.Contrast = 0
+                end
+            end
+        end
+    end)
+end)
+CreateToggle(spP, "Anti-AFK", true, function(s) CFG.Guard.antiAFK = s end)
+
+CreateSection(spP, "💚 Auto-Heal")
+CreateToggle(spP, "Авто-лечение", false, function(s)
+    CFG.Guard.autoHeal = s
+    PushNotify("Auto-Heal", s and "ВКЛ" or "ВЫКЛ", s and "success" or "warn")
+end)
+CreateSlider(spP, "Порог HP %", 10, 90, 50, function(v) CFG.Guard.healThreshold = v end)
+CreateSlider(spP, "Задержка (мс) ×100", 10, 500, 100, function(v) CFG.Guard.healDelay = v / 100 end)
+
+-- Anti-Stun
+local StunKeywords = {"hypno","stun","freeze","frozen","charm","confuse","sleep","trance","zombie","ice"}
+local function IsStunAnimation(n)
+    if not n then return false end
+    n = string.lower(n)
+    for _, k in ipairs(StunKeywords) do
+        if string.find(n, k, 1, true) then return true end
+    end
+    return false
+end
+
+task.spawn(function()
+    while Alive and task.wait(0.1) do
+        if CFG.Guard.antiStun then
+            pcall(function()
+                local c = LocalPlayer.Character
+                local h = c and c:FindFirstChildOfClass("Humanoid")
+                local a = h and h:FindFirstChildOfClass("Animator")
+                if a then
+                    for _, t in ipairs(a:GetPlayingAnimationTracks()) do
+                        local n = ""
+                        pcall(function() if t.Animation then n = t.Animation.Name or "" end end)
+                        if IsStunAnimation(n) or IsStunAnimation(t.Name) then
+                            pcall(function() t:Stop(0) end)
+                        end
+                    end
+                end
+                if h then
+                    h.PlatformStand = false
+                    h.AutoRotate = true
+                end
+            end)
+        end
+        if CFG.Guard.antiDamage then
+            pcall(function()
+                local h = LocalPlayer.Character and
+                    LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if h and h.Health < h.MaxHealth then
+                    h.Health = h.MaxHealth
+                end
+            end)
+        end
+        if CFG.Guard.autoHeal then
+            pcall(function()
+                local h = LocalPlayer.Character and
+                    LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if h and h.Health > 0 and h.Health < h.MaxHealth * (CFG.Guard.healThreshold / 100) then
+                    h.Health = h.MaxHealth
+                end
+            end)
+        end
+    end
+end)
+
+-- Anti-Fling / Anti-Void
+local LastSafePos = Vector3.new(0, 50, 0)
+RunService.Stepped:Connect(function()
+    if not Alive then return end
+    local c = LocalPlayer.Character
+    local hrp = c and c:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    if CFG.Guard.antiFling then
+        pcall(function()
+            if hrp.AssemblyLinearVelocity.Magnitude > 250 then
+                hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                hrp.AssemblyAngularVelocity = Vector3.new(0,0,0)
+            end
+        end)
+    end
+    if CFG.Guard.antiVoid then
+        pcall(function()
+            local py = hrp.Position.Y
+            if py > -80 and py < 1e4 then
+                LastSafePos = hrp.Position
+            elseif py <= -80 then
+                hrp.CFrame = CFrame.new(LastSafePos + Vector3.new(0, 5, 0))
+                hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
+            end
+        end)
+    end
+end)
+
+-- Anti-AFK
+pcall(function()
+    LocalPlayer.Idled:Connect(function()
+        if not Alive or not CFG.Guard.antiAFK then return end
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new(0, 0))
+        end)
+    end)
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [22/32] TRACKER
+-- ═══════════════════════════════════════════════════════════════════════════
+local Tracker = {
+    on = false,
+    data = {},
+    maxHistory = 100,
+    serverJoinTime = os.time(),
+}
+
+task.spawn(function()
+    while Alive and task.wait(2) do
+        if not CFG.Tracker.on then continue end
+        pcall(function()
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer then
+                    local uid = tostring(p.UserId)
+                    if not Tracker.data[uid] then
+                        Tracker.data[uid] = {
+                            name = p.Name,
+                            displayName = p.DisplayName,
+                            firstSeen = os.time(),
+                            lastSeen = os.time(),
+                            joins = 1,
+                            health = 100,
+                        }
+                    else
+                        Tracker.data[uid].name = p.Name
+                        Tracker.data[uid].lastSeen = os.time()
+                    end
+                    local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        Tracker.data[uid].health = math.floor(hum.Health)
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+task.spawn(function()
+    while Alive and task.wait(60) do
+        if CFG.Tracker.on then
+            local now = os.time()
+            for uid, info in pairs(Tracker.data) do
+                if now - info.lastSeen > 300 then
+                    Tracker.data[uid] = nil
+                end
+            end
+        end
+    end
+end)
+
+local trP = Pages["Tracker"]
+CreateSection(trP, "👥 Трекер игроков")
+CreateToggle(trP, "Включить трекер", false, function(s)
+    CFG.Tracker.on = s
+    PushNotify("Трекер", s and "Следим за игроками" or "Отключён", s and "success" or "warn")
+end)
+CreateToggle(trP, "Счётчик в HUD", false, function(s) CFG.HUD.showTracker = s end)
+CreateSlider(trP, "Макс. записей", 10, 500, 100, function(v) Tracker.maxHistory = v end)
+
+CreateSection(trP, "📋 Список игроков")
+local trackerCard = CreateCard(trP, 200)
+local trackerList = Instance.new("TextLabel", trackerCard)
+trackerList.Size = UDim2.new(1, -16, 1, -12)
+trackerList.Position = UDim2.new(0, 8, 0, 6)
+trackerList.BackgroundTransparency = 1
+trackerList.RichText = true
+trackerList.TextColor3 = CFG.Text
+trackerList.Font = Enum.Font.Code
+trackerList.TextSize = 10
+trackerList.TextXAlignment = Enum.TextXAlignment.Left
+trackerList.TextYAlignment = Enum.TextYAlignment.Top
+trackerList.TextWrapped = true
+trackerList.ZIndex = 7
+
+task.spawn(function()
+    while Alive do
+        task.wait(2)
+        if CFG.Tracker.on then
+            local lines = {}
+            local count = 0
+            for uid, info in pairs(Tracker.data) do
+                count = count + 1
+                if count > 8 then break end
+                local timeSeen = os.time() - info.firstSeen
+                local hpColor = info.health > 50 and "#FFFFFF" or (info.health > 20 and "#A0A0A0" or "#606060")
+                table.insert(lines, string.format(
+                    "• <b>%s</b> · HP: <font color='%s'>%d</font> · ⏱ %ds",
+                    info.name, hpColor, info.health or 0, timeSeen))
+            end
+            if #lines == 0 then
+                trackerList.Text = "<i>Нет данных. Включи трекер.</i>"
+            else
+                trackerList.Text = table.concat(lines, "\n")
+            end
+        else
+            trackerList.Text = "<i>Трекер выключен</i>"
+        end
+    end
+end)
+
+CreateBtn(trP, "🗑 Очистить трекер", Color3.fromRGB(35, 35, 35), function()
+    Tracker.data = {}
+    PushNotify("Трекер", "Данные очищены", "success")
+end)
+CreateBtn(trP, "💾 Сохранить трекер", Color3.fromRGB(35, 40, 35), function()
+    if FS.W then
+        pcall(function()
+            local count = 0
+            for _ in pairs(Tracker.data) do count = count + 1 end
+            FS.W(FILES.tracker, HttpService:JSONEncode(Tracker.data))
+            PushNotify("Трекер", "Сохранено: " .. tostring(count), "success")
+        end)
+    end
+end)
+CreateBtn(trP, "📂 Загрузить трекер", Color3.fromRGB(35, 35, 40), function()
+    if FS.R and FS.C and FS.C(FILES.tracker) then
+        pcall(function()
+            local data = HttpService:JSONDecode(FS.R(FILES.tracker))
+            if type(data) == "table" then
+                Tracker.data = data
+                local count = 0
+                for _ in pairs(Tracker.data) do count = count + 1 end
+                PushNotify("Трекер", "Загружено: " .. tostring(count), "success")
+            end
+        end)
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [23/32] COMBO TRAINER
+-- ═══════════════════════════════════════════════════════════════════════════
+local Combo = {
+    on = true,
+    counter = 0,
+    maxCombo = 0,
+    lastHitTime = 0,
+    display = 0,
+    totalDamage = 0,
+    sessionStart = os.time(),
+}
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not Alive or not Combo.on then return end
+    if processed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+       or input.UserInputType == Enum.UserInputType.Touch then
+        local now = tick()
+        if now - Combo.lastHitTime < 0.8 then
+            Combo.counter = Combo.counter + 1
+        else
+            if Combo.counter > Combo.maxCombo then
+                Combo.maxCombo = Combo.counter
+            end
+            Combo.counter = 1
+        end
+        Combo.lastHitTime = now
+        Combo.display = Combo.counter
+        Combo.totalDamage = Combo.totalDamage + math.random(15, 45)
+    end
+end)
+
+task.spawn(function()
+    while Alive do
+        task.wait(0.5)
+        if Combo.on and Combo.counter > 0 then
+            if tick() - Combo.lastHitTime > 1.5 then
+                if Combo.counter > Combo.maxCombo then
+                    Combo.maxCombo = Combo.counter
+                end
+                Combo.counter = 0
+                Combo.display = 0
+            end
+        end
+    end
+end)
+
+-- HUD комбо
+local ComboHUD = Instance.new("TextLabel", SG)
+ComboHUD.Size = UDim2.new(0, 180, 0, 60)
+ComboHUD.Position = UDim2.new(0.5, -90, 0.75, 0)
+ComboHUD.BackgroundTransparency = 1
+ComboHUD.RichText = true
+ComboHUD.TextColor3 = CFG.Text
+ComboHUD.Font = Enum.Font.GothamBold
+ComboHUD.TextSize = 32
+ComboHUD.TextStrokeTransparency = 0
+ComboHUD.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+ComboHUD.Text = ""
+ComboHUD.Visible = false
+ComboHUD.ZIndex = 30
+
+local ComboSub = Instance.new("TextLabel", SG)
+ComboSub.Size = UDim2.new(0, 180, 0, 20)
+ComboSub.Position = UDim2.new(0.5, -90, 0.75, 55)
+ComboSub.BackgroundTransparency = 1
+ComboSub.TextColor3 = CFG.TextDim
+ComboSub.Font = Enum.Font.Code
+ComboSub.TextSize = 11
+ComboSub.Text = ""
+ComboSub.Visible = false
+ComboSub.ZIndex = 30
+
+task.spawn(function()
+    while Alive do
+        task.wait(0.1)
+        if Combo.on and CFG.HUD.showCombo then
+            if Combo.display > 0 then
+                ComboHUD.Visible = true
+                ComboSub.Visible = true
+                local scale = 1 + math.min(Combo.display, 20) * 0.03
+                ComboHUD.Text = "x" .. Combo.counter
+                ComboHUD.TextSize = math.floor(32 * scale)
+                ComboSub.Text = string.format("MAX: x%d · DMG: %d", Combo.maxCombo, Combo.totalDamage)
+            else
+                ComboHUD.Visible = false
+                ComboSub.Visible = false
+            end
+        else
+            ComboHUD.Visible = false
+            ComboSub.Visible = false
+        end
+    end
+end)
+
+local coP = Pages["Combo"]
+CreateSection(coP, "⚡ Комбо-тренер")
+CreateToggle(coP, "Счётчик комбо", true, function(s)
+    Combo.on = s
+    CFG.Combo.on = s
+end)
+CreateToggle(coP, "Показывать в HUD", true, function(s)
+    CFG.HUD.showCombo = s
+end)
+
+CreateSection(coP, "📊 Статистика комбо")
+local comboCard = CreateCard(coP, 110)
+local comboStatLbl = Instance.new("TextLabel", comboCard)
+comboStatLbl.Size = UDim2.new(1, -16, 1, -12)
+comboStatLbl.Position = UDim2.new(0, 8, 0, 6)
+comboStatLbl.BackgroundTransparency = 1
+comboStatLbl.RichText = true
+comboStatLbl.TextColor3 = CFG.Text
+comboStatLbl.Font = Enum.Font.Code
+comboStatLbl.TextSize = 11
+comboStatLbl.TextXAlignment = Enum.TextXAlignment.Left
+comboStatLbl.TextYAlignment = Enum.TextYAlignment.Top
+comboStatLbl.ZIndex = 7
+
+task.spawn(function()
+    while Alive do
+        task.wait(1)
+        local sessionTime = os.time() - Combo.sessionStart
+        local m = math.floor(sessionTime / 60)
+        local s = sessionTime % 60
+        comboStatLbl.Text = string.format(
+            "Макс. комбо: <b>x%d</b>\n" ..
+            "Текущее: <b>x%d</b>\n" ..
+            "Общий урон: <b>%d</b>\n" ..
+            "Время: <b>%02d:%02d</b>",
+            Combo.maxCombo, Combo.counter, Combo.totalDamage, m, s)
+    end
+end)
+
+CreateBtn(coP, "🔄 Сбросить комбо-статистику", Color3.fromRGB(40, 35, 35), function()
+    Combo.maxCombo = 0
+    Combo.counter = 0
+    Combo.totalDamage = 0
+    Combo.sessionStart = os.time()
+    PushNotify("Комбо", "Сброшено", "success")
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [24/32] ЧАТ-МАКРОСЫ + СПАМ
+-- ═══════════════════════════════════════════════════════════════════════════
+local function SendChat(txt)
+    pcall(function()
+        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+            local tc = TextChatService:FindFirstChild("TextChannels")
+            local gc = tc and tc:FindFirstChild("RBXGeneral")
+            if gc and gc:IsA("TextChannel") then
+                gc:SendAsync(txt)
+                return
+            end
+        end
+        local lg = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+        local smr = lg and lg:FindFirstChild("SayMessageRequest")
+        if smr and smr:IsA("RemoteEvent") then
+            smr:FireServer(txt, "All")
+        end
+    end)
+end
+
+local CHAT_MACROS = {
+    {category = "👋 Приветствия", phrases = {
+        "Привет всем!", "Ку, народ!", "Йо, всем привет!",
+        "Здарова, братва!", "Доброе утро!", "Добрый вечер!",
+        "Всем салют!", "Хэлло, я тут."
+    }},
+    {category = "🎮 Игровые", phrases = {
+        "GG WP всем!", "Хорошая игра!", "Го-го-го!",
+        "+1, согласен.", "Респект!", "Красиво сыграно!", "Изи катка."
+    }},
+    {category = "🎯 Тактика", phrases = {
+        "Враг слева!", "Враг справа!", "Осторожно, сзади!",
+        "Отходим!", "Все вперёд!", "Прикрывай!",
+        "Хилку кинь!", "Ресни меня!"
+    }},
+    {category = "😎 Мемы", phrases = {
+        "Изи-изи.", "Кек, ну ты даёшь.", "Лол, что происходит?",
+        "Ору в голосину!", "Жиза.", "Ты топ, братан!",
+        "Пипец, ты как это сделал?"
+    }},
+    {category = "🛡 Поддержка", phrases = {
+        "Молодец!", "Я с тобой!", "Иду на помощь!",
+        "Держись!", "Всем удачи!", "Ты лучший!"
+    }},
+    {category = "🎁 Ивенты", phrases = {
+        "Ивент скоро!", "Все на ивент!",
+        "Ждём админа.", "Го на ивент!", "Приду через 5 минут."
+    }},
+}
+
+local chtP = Pages["Chat"]
+CreateSection(chtP, "💬 Отправить в чат")
+
+local chatInput = Instance.new("TextBox", chtP)
+chatInput.Size = UDim2.new(1, 0, 0, 36)
+chatInput.BackgroundColor3 = CFG.Card
+chatInput.PlaceholderText = "Своё сообщение..."
+chatInput.Text = ""
+chatInput.TextColor3 = CFG.Text
+chatInput.PlaceholderColor3 = CFG.SubText
+chatInput.Font = Enum.Font.Gotham
+chatInput.TextSize = CFG.Menu.textSize
+chatInput.ClearTextOnFocus = false
+chatInput.ZIndex = 7
+UX.corner(chatInput, 8)
+UX.stroke(chatInput, CFG.Border, 1)
+
+CreateBtn(chtP, "📤 Отправить", Color3.fromRGB(35, 40, 35), function()
+    if chatInput.Text ~= "" then
+        SendChat(chatInput.Text)
+        PushNotify("Чат", "Отправлено", "success")
+    end
+end)
+
+CreateSection(chtP, "⚡ Быстрые макросы")
+for _, cat in ipairs(CHAT_MACROS) do
+    local catLbl = Instance.new("TextLabel", chtP)
+    catLbl.Size = UDim2.new(1, 0, 0, 20)
+    catLbl.BackgroundTransparency = 1
+    catLbl.Text = cat.category
+    catLbl.TextColor3 = CFG.TextDim
+    catLbl.Font = Enum.Font.GothamBold
+    catLbl.TextSize = CFG.Menu.textSize - 1
+    catLbl.TextXAlignment = Enum.TextXAlignment.Left
+    catLbl.ZIndex = 7
+
+    local rowHolder = Instance.new("Frame", chtP)
+    rowHolder.Size = UDim2.new(1, 0, 0, math.ceil(#cat.phrases / 2) * 34 + 4)
+    rowHolder.BackgroundTransparency = 1
+    rowHolder.ZIndex = 6
+
+    for i, phrase in ipairs(cat.phrases) do
+        local col = ((i - 1) % 2)
+        local row = math.floor((i - 1) / 2)
+        local b = Instance.new("TextButton", rowHolder)
+        b.Size = UDim2.new(0.49, 0, 0, 30)
+        b.Position = UDim2.new(col * 0.51, 0, row * 34, 0)
+        b.BackgroundColor3 = CFG.Card
+        b.Text = string.sub(phrase, 1, 16)
+        b.TextColor3 = CFG.Text
+        b.Font = Enum.Font.Gotham
+        b.TextSize = CFG.Menu.textSize - 2
+        b.TextTruncate = Enum.TextTruncate.AtEnd
+        b.ZIndex = 7
+        UX.corner(b, 6)
+        UX.stroke(b, CFG.Border, 1)
+        UX.ripple(b)
+        b.MouseButton1Click:Connect(function()
+            PlayClick()
+            SendChat(phrase)
+        end)
+    end
+end
+
+CreateSection(chtP, "🔁 Чат-спам")
+CreateToggle(chtP, "Включить спам", false, function(s)
+    CFG.Auto.spamChat = s
+    PushNotify("Спам", s and "ВКЛ" or "ВЫКЛ", s and "success" or "warn")
+end)
+CreateSlider(chtP, "Интервал (мс)", 1000, 30000, 5000, function(v) CFG.Auto.spamMs = v end)
+CreateToggle(chtP, "Рандомизация", true, function(s) CFG.Auto.spamRandom = s end)
+
+local spamInput = Instance.new("TextBox", chtP)
+spamInput.Size = UDim2.new(1, 0, 0, 36)
+spamInput.BackgroundColor3 = CFG.Card
+spamInput.PlaceholderText = "Текст для спама..."
+spamInput.Text = CFG.Auto.spamText
+spamInput.TextColor3 = CFG.Text
+spamInput.PlaceholderColor3 = CFG.SubText
+spamInput.Font = Enum.Font.Gotham
+spamInput.TextSize = CFG.Menu.textSize
+spamInput.ClearTextOnFocus = false
+spamInput.ZIndex = 7
+UX.corner(spamInput, 8)
+UX.stroke(spamInput, CFG.Border, 1)
+spamInput:GetPropertyChangedSignal("Text"):Connect(function()
+    CFG.Auto.spamText = spamInput.Text
+end)
+
+task.spawn(function()
+    while Alive do
+        task.wait((CFG.Auto.spamMs or 5000) / 1000)
+        if CFG.Auto.spamChat then
+            local allPhrases = {}
+            for _, cat in ipairs(CHAT_MACROS) do
+                for _, p in ipairs(cat.phrases) do
+                    table.insert(allPhrases, p)
+                end
+            end
+            local msg = CFG.Auto.spamText
+            if CFG.Auto.spamRandom and #allPhrases > 0 then
+                msg = allPhrases[math.random(1, #allPhrases)]
+            end
+            SendChat(msg)
+        end
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [25/32] SETTINGS + MUSIC + STATS
+-- ═══════════════════════════════════════════════════════════════════════════
+local stP = Pages["Settings"]
+
+CreateSection(stP, "🎨 Интерфейс")
+CreateSlider(stP, "Размер кнопки (px)", 40, 90, CFG.Menu.buttonSize, function(v)
+    CFG.Menu.buttonSize = v
+    FB.Size = UDim2.new(0, v, 0, v)
+    SaveSettings()
+end)
+CreateSlider(stP, "Ширина меню", 280, 450, CFG.Menu.menuW, function(v)
+    CFG.Menu.menuW = v
+    if IS_MOBILE then M.Size = UDim2.new(0, v, 0, CFG.Menu.menuH) end
+    SaveSettings()
+end)
+CreateSlider(stP, "Высота меню", 300, 600, CFG.Menu.menuH, function(v)
+    CFG.Menu.menuH = v
+    if IS_MOBILE then M.Size = UDim2.new(0, CFG.Menu.menuW, 0, v) end
+    SaveSettings()
+end)
+CreateSlider(stP, "Прозрачность %", 40, 100, math.floor(CFG.Menu.opacity * 100), function(v)
+    CFG.Menu.opacity = v / 100
+    M.BackgroundTransparency = 1 - CFG.Menu.opacity
+    H.BackgroundTransparency = 1 - CFG.Menu.opacity
+    TBScroll.BackgroundTransparency = 1 - CFG.Menu.opacity
+    Foot.BackgroundTransparency = 1 - CFG.Menu.opacity
+    SaveSettings()
+end)
+CreateSlider(stP, "Размер шрифта", 10, 16, CFG.Menu.textSize, function(v)
+    CFG.Menu.textSize = v
+    SaveSettings()
+end)
+CreateSlider(stP, "Скорость пульсации ×10", 5, 50, math.floor(CFG.Menu.pulseSpeed * 10), function(v)
+    CFG.Menu.pulseSpeed = v / 10
+    SaveSettings()
+end)
+CreateToggle(stP, "Пульсация кнопки", CFG.Menu.showPulse, function(s)
+    CFG.Menu.showPulse = s
+    SaveSettings()
+end)
+CreateToggle(stP, "Плавающие блики", CFG.Menu.showBlobs, function(s)
+    CFG.Menu.showBlobs = s
+    SaveSettings()
+end)
+
+CreateSection(stP, "🎵 Звук")
+CreateDropdown(stP, "Звуковой пак", {"Default", "Soft", "Sharp", "Silent"},
+    CFG.Menu.soundPack, function(v)
+        CFG.Menu.soundPack = v
+        SaveSettings()
+        PushNotify("Звук", "Пак: " .. v, "success")
+    end)
+CreateToggle(stP, "Отключить звуки", CFG.Audio.mute, function(s)
+    CFG.Audio.mute = s
+    SaveSettings()
+end)
+CreateSlider(stP, "Громкость %", 10, 100, math.floor(CFG.Audio.vol * 100), function(v)
+    CFG.Audio.vol = v / 100
+    SaveSettings()
+end)
+
+CreateSection(stP, "💾 Конфигурация")
+CreateBtn(stP, "💾 Сохранить всё", Color3.fromRGB(35, 45, 35), function()
+    SaveSettings()
+    SaveStats()
+    if FS.W then
+        pcall(function()
+            FS.W(FILES.button, HttpService:JSONEncode({
+                xs = FB.Position.X.Scale, xo = FB.Position.X.Offset,
+                ys = FB.Position.Y.Scale, yo = FB.Position.Y.Offset,
+            }))
+        end)
+    end
+    PushNotify("Конфиг", "Сохранено", "success")
+    PlaySuccess()
+end)
+CreateBtn(stP, "📂 Загрузить настройки", Color3.fromRGB(35, 35, 45), function()
+    LoadSettings()
+    LoadStats()
+    FB.Size = UDim2.new(0, CFG.Menu.buttonSize, 0, CFG.Menu.buttonSize)
+    if IS_MOBILE then M.Size = UDim2.new(0, CFG.Menu.menuW, 0, CFG.Menu.menuH) end
+    PushNotify("Конфиг", "Загружено", "success")
+end)
+CreateBtn(stP, "🔄 Сброс к заводским", Color3.fromRGB(45, 35, 35), function()
+    CFG.Menu.buttonSize = 55
+    CFG.Menu.menuW = 340
+    CFG.Menu.menuH = 430
+    CFG.Menu.opacity = 1
+    CFG.Menu.textSize = 12
+    CFG.Menu.pulseSpeed = 2
+    CFG.Menu.showPulse = true
+    CFG.Menu.showBlobs = true
+    CFG.Menu.soundPack = "Default"
+    CFG.Audio.mute = false
+    CFG.Audio.vol = 0.5
+    FB.Size = UDim2.new(0, 55, 0, 55)
+    if IS_MOBILE then M.Size = UDim2.new(0, 340, 0, 430) end
+    SaveSettings()
+    PushNotify("Сброс", "Заводские", "warn")
+end)
+
+CreateSection(stP, "💾 Backup")
+CreateBtn(stP, "📸 Создать backup", Color3.fromRGB(35, 40, 45), function()
+    if not FS.W then return end
+    local timestamp = os.date("%Y%m%d_%H%M%S")
+    pcall(function()
+        local data = {
+            Menu = CFG.Menu, Audio = CFG.Audio,
+            Theme = {R = CFG.Theme.R, G = CFG.Theme.G, B = CFG.Theme.B},
+            Aim = CFG.Aim, ESP = CFG.ESP, Move = CFG.Move,
+            Guard = CFG.Guard, Gfx = CFG.Gfx,
+        }
+        FS.W(FILES.backup .. timestamp .. ".json", HttpService:JSONEncode(data))
+        PushNotify("Backup", "Создан: " .. timestamp, "success")
+    end)
+end)
+
+-- Music Player
+local MusicPlayer = {sound = nil, current = nil}
+
+local function PlayMusic(trackId, trackName)
+    pcall(function()
+        if MusicPlayer.sound then
+            MusicPlayer.sound:Stop()
+            MusicPlayer.sound:Destroy()
+            MusicPlayer.sound = nil
+        end
+        MusicPlayer.sound = Instance.new("Sound")
+        MusicPlayer.sound.SoundId = trackId
+        MusicPlayer.sound.Volume = CFG.Music.volume
+        MusicPlayer.sound.Looped = true
+        MusicPlayer.sound.Parent = AudioFolder
+        MusicPlayer.sound:Play()
+        MusicPlayer.current = trackName
+        CFG.Music.currentTrack = trackName
+    end)
+end
+
+local function StopMusic()
+    pcall(function()
+        if MusicPlayer.sound then
+            MusicPlayer.sound:Stop()
+            MusicPlayer.sound:Destroy()
+            MusicPlayer.sound = nil
+        end
+        MusicPlayer.current = nil
+        CFG.Music.currentTrack = nil
+    end)
+end
+
+CreateSection(stP, "🎵 Music Player")
+CreateDropdown(stP, "Трек",
+    {"Ambient", "Focus", "Chill", "Epic"}, CFG.Music.currentTrack or "Ambient",
+    function(v)
+        for _, t in ipairs(CFG.Music.playlist) do
+            if t.name == v then
+                PlayMusic(t.id, t.name)
+                PushNotify("Музыка", "Играет: " .. v, "success")
+                break
+            end
+        end
+    end)
+CreateSlider(stP, "Громкость музыки %", 0, 100, math.floor(CFG.Music.volume * 100), function(v)
+    CFG.Music.volume = v / 100
+    if MusicPlayer.sound then MusicPlayer.sound.Volume = CFG.Music.volume end
+end)
+CreateBtn(stP, "⏹ Остановить музыку", Color3.fromRGB(40, 35, 35), function()
+    StopMusic()
+    PushNotify("Музыка", "Остановлено", "warn")
+end)
+
+-- Session Stats
+CreateSection(stP, "📊 Статистика сессии")
+local statsCard = CreateCard(stP, 130)
+local statsLbl = Instance.new("TextLabel", statsCard)
+statsLbl.Size = UDim2.new(1, -16, 1, -12)
+statsLbl.Position = UDim2.new(0, 8, 0, 6)
+statsLbl.BackgroundTransparency = 1
+statsLbl.RichText = true
+statsLbl.TextColor3 = CFG.Text
+statsLbl.Font = Enum.Font.Code
+statsLbl.TextSize = 10
+statsLbl.TextXAlignment = Enum.TextXAlignment.Left
+statsLbl.TextYAlignment = Enum.TextYAlignment.Top
+statsLbl.ZIndex = 7
+
+task.spawn(function()
+    while Alive do
+        task.wait(1)
+        local sessionTime = os.time() - CFG.Stats.sessionStart
+        local h = math.floor(sessionTime / 3600)
+        local m = math.floor((sessionTime % 3600) / 60)
+        local s = sessionTime % 60
+        statsLbl.Text = string.format(
+            "⏱ Время: <b>%02d:%02d:%02d</b>\n" ..
+            "🎯 Аймбот: <b>%d</b>\n" ..
+            "👁 ESP: <b>%d</b>\n" ..
+            "✈ Полёт: <b>%d</b> studs\n" ..
+            "⚡ Действий: <b>%d</b>",
+            h, m, s,
+            CFG.Stats.aimbotHits or 0,
+            CFG.Stats.espActivations or 0,
+            math.floor(CFG.Stats.flyDistance or 0),
+            CFG.Stats.totalActions or 0)
+    end
+end)
+
+CreateBtn(stP, "🔄 Сбросить статистику сессии", Color3.fromRGB(40, 35, 35), function()
+    CFG.Stats.sessionStart = os.time()
+    CFG.Stats.aimbotHits = 0
+    CFG.Stats.espActivations = 0
+    CFG.Stats.flyDistance = 0
+    CFG.Stats.totalActions = 0
+    SaveStats()
+    PushNotify("Статистика", "Сброшена", "success")
+end)
+
+CreateSection(stP, "🌐 Server Hop")
+CreateBtn(stP, "🔄 Перейти на другой сервер", Color3.fromRGB(35, 40, 50), function()
+    pcall(function()
+        local req = (syn and syn.request) or (http and http.request) or request
+        if not req then
+            PushNotify("Server Hop", "HTTP недоступен", "error")
+            return
+        end
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId ..
+            "/servers/Public?sortOrder=Asc&limit=100"
+        local res = req({Url = url, Method = "GET"})
+        local data = HttpService:JSONDecode(res.Body)
+        if data and data.data then
+            for _, srv in ipairs(data.data) do
+                if srv.playing < srv.maxPlayers and srv.id ~= game.JobId then
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id, LocalPlayer)
+                    PushNotify("Server Hop", "Переход...", "success")
+                    return
+                end
+            end
+        end
+        PushNotify("Server Hop", "Свободных нет", "warn")
+    end)
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [26/32] ГЛАВНЫЙ HUD-ЦИКЛ
+-- ═══════════════════════════════════════════════════════════════════════════
+local FC, TC = 0, 0
+
+RunService.RenderStepped:Connect(function(dt)
+    if not Alive then return end
+    FC = FC + 1
+    TC = TC + dt
+    if TC >= 1 then
+        CFG.Fps = math.round(FC / TC)
+        FC = 0
+        TC = 0
+    end
+
+    if CFG.HUD.wm and WM and WM.Parent then
+        WM.Visible = true
+        if NetworkStats then
+            pcall(function() CFG.Ping = math.round(NetworkStats.ServerPing) end)
+        end
+        local fc = CFG.Fps >= 45 and "255,255,255" or (CFG.Fps >= 25 and "160,160,160" or "80,80,80")
+        local pc = CFG.Ping <= 90 and "255,255,255" or (CFG.Ping <= 200 and "160,160,160" or "80,80,80")
+        local extra = ""
+        if CFG.HUD.memory then
+            pcall(function()
+                local mem = StatsService:GetTotalMemoryUsageMb()
+                CFG.Memory = mem
+                extra = extra .. string.format("\nMem: <font color='rgb(200,200,200)'>%.0f MB</font>", mem)
+            end)
+        end
+        if CFG.HUD.speed then
+            pcall(function()
+                local hrp = LocalPlayer.Character and
+                    LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    extra = extra .. string.format("\nSpd: <font color='rgb(200,200,200)'>%.0f</font>",
+                        hrp.AssemblyLinearVelocity.Magnitude)
+                end
+            end)
+        end
+        if CFG.HUD.showTracker and Tracker then
+            local count = 0
+            for _ in pairs(Tracker.data or {}) do count = count + 1 end
+            extra = extra .. string.format("\nTracked: <font color='rgb(200,200,200)'>%d</font>", count)
+        end
+        WMStats.Text = string.format(
+            "FPS: <font color='rgb(%s)'>%d</font> | Ping: <font color='rgb(%s)'>%d</font>%s",
+            fc, CFG.Fps, pc, CFG.Ping, extra)
+    elseif WM then
+        WM.Visible = false
+    end
+
+    if CFG.HUD.coords and CoordHUD then
+        CoordHUD.Visible = true
+        local h = LocalPlayer.Character and
+            LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if h then
+            local p = h.Position
+            CoordHUD.Text = string.format("X: %d  Y: %d  Z: %d",
+                math.floor(p.X), math.floor(p.Y), math.floor(p.Z))
+        end
+    elseif CoordHUD then
+        CoordHUD.Visible = false
+    end
+
+    if CFG.HUD.showAimTarget and CFG.Aim.on and AimBot and AimBot.currentTarget and AimTargetHUD then
+        AimTargetHUD.Visible = true
+        AimTargetHUD.Text = string.format(
+            "🎯 %s · %.0f studs · HP: %d",
+            AimBot.currentTarget.player.Name,
+            AimBot.currentTarget.dist,
+            math.floor(AimBot.currentTarget.health))
+    elseif AimTargetHUD then
+        AimTargetHUD.Visible = false
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [27/32] УПРАВЛЕНИЕ МЕНЮ
+-- ═══════════════════════════════════════════════════════════════════════════
+local isMinimized = true
+local isCollapsed = false
+
+local function ShowMenu()
+    M.Visible = true
+    FB.Visible = false
+    MUIScale.Scale = 0
+    TweenService:Create(MUIScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Scale = 1
+    }):Play()
+    SwitchTab(ActiveTabName)
+    local origPos = M.Position
+    M.Position = UDim2.new(origPos.X.Scale, origPos.X.Offset,
+                            origPos.Y.Scale, origPos.Y.Offset + 40)
+    TweenService:Create(M, TweenInfo.new(0.35, Enum.EasingStyle.Back), {
+        Position = origPos
+    }):Play()
+end
+
+local function HideMenu()
+    TweenService:Create(MUIScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+        Scale = 0
+    }):Play()
+    task.delay(0.25, function()
+        M.Visible = false
+        FB.Visible = true
+    end)
+end
+
+local function ToggleMenu()
+    if not Alive then return end
+    PlayClick()
+    if M.Visible then
+        HideMenu()
+        isMinimized = true
+    else
+        ShowMenu()
+        isMinimized = false
+    end
+end
+
+local function ToggleCollapse()
+    if not Alive then return end
+    PlayClick()
+    isCollapsed = not isCollapsed
+    if isCollapsed then
+        TweenService:Create(M, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {
+            Size = UDim2.new(1, -20, 0, 60)
+        }):Play()
+        TBScroll.Visible = false
+        Cont.Visible = false
+        Foot.Visible = false
+    else
+        local targetSize = IS_MOBILE and UDim2.new(0, CFG.Menu.menuW, 0, CFG.Menu.menuH)
+                                      or UDim2.new(0, 420, 0, CFG.Menu.menuH)
+        TweenService:Create(M, TweenInfo.new(0.35, Enum.EasingStyle.Back), {
+            Size = targetSize
+        }):Play()
+        TBScroll.Visible = true
+        Cont.Visible = true
+        Foot.Visible = true
+    end
+end
+
+MinBtn.MouseButton1Click:Connect(ToggleCollapse)
+HideBtn.MouseButton1Click:Connect(ToggleMenu)
+CloseBtn.MouseButton1Click:Connect(function()
+    PlayClick()
+    if _G.DW_Exit then _G.DW_Exit() end
+end)
+FB.MouseButton1Click:Connect(ToggleMenu)
+
+-- Двойной тап по header — свернуть
+local lastTap = 0
+H.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.Touch then
+        local now = tick()
+        if now - lastTap < 0.3 then
+            ToggleCollapse()
+        end
+        lastTap = now
+    end
+end)
+
+-- Свайп вниз по вкладкам — закрыть
+TBScroll.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.Touch then
+        local y0 = i.Position.Y
+        local conn
+        conn = UserInputService.InputChanged:Connect(function(ch)
+            if ch.UserInputType ~= Enum.UserInputType.Touch then return end
+            if ch.Position.Y - y0 > 120 then
+                conn:Disconnect()
+                if M.Visible then ToggleMenu() end
+            end
+        end)
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [28/32] EMERGENCY — Anti-Crash + Safe Reset
+-- ═══════════════════════════════════════════════════════════════════════════
+local crashCount = 0
+local function SafeCall(fn, ...)
+    local ok, err = pcall(fn, ...)
+    if not ok then
+        crashCount = crashCount + 1
+        if crashCount % 10 == 0 then
+            warn("[DW] Ошибок: " .. crashCount .. " — " .. tostring(err))
+        end
+    end
+    return ok
+end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    if not Alive then return end
+    SafeCall(function()
+        CFG.Move.flyOn = false
+        CFG.Move.noclip = false
+        CFG.Guard.antiFling = false
+        CFG.Guard.antiVoid = false
+    end)
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [29/32] УЛУЧШЕННЫЙ CONFIG LOADER (загрузка в конце)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Переприменяем размеры из загруженного конфига (если был)
+SafeCall(function()
+    if CFG.Menu.buttonSize and CFG.Menu.buttonSize ~= 55 then
+        FB.Size = UDim2.new(0, CFG.Menu.buttonSize, 0, CFG.Menu.buttonSize)
+    end
+    if IS_MOBILE then
+        M.Size = UDim2.new(0, CFG.Menu.menuW, 0, CFG.Menu.menuH)
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [30/32] ВЫХОД
+-- ═══════════════════════════════════════════════════════════════════════════
+_G.DW_Exit = function()
+    Alive = false
+    SafeCall(SaveSettings)
+    SafeCall(SaveStats)
+    SafeCall(function()
+        if FS.W then
+            FS.W(FILES.button, HttpService:JSONEncode({
+                xs = FB.Position.X.Scale, xo = FB.Position.X.Offset,
+                ys = FB.Position.Y.Scale, yo = FB.Position.Y.Offset,
+            }))
+        end
+    end)
+    SafeCall(function()
+        if flyConn then flyConn:Disconnect() end
+        if flyBV then flyBV:Destroy() end
+        if flyBG then flyBG:Destroy() end
+    end)
+    SafeCall(function()
+        if MusicPlayer and MusicPlayer.sound then
+            MusicPlayer.sound:Stop()
+            MusicPlayer.sound:Destroy()
+        end
+    end)
+    SafeCall(function() SG:Destroy() end)
+    SafeCall(function() NotifySG:Destroy() end)
+    SafeCall(function()
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then
+                local hl = p.Character:FindFirstChild("DW_HL")
+                if hl then hl:Destroy() end
+                local ihl = p.Character:FindFirstChild("DW_ItemHL")
+                if ihl then ihl:Destroy() end
+            end
+        end
+    end)
+    SafeCall(function()
+        Lighting.GlobalShadows = CFG.orig.shadows
+        Lighting.FogEnd = CFG.orig.fog
+        Lighting.Ambient = CFG.orig.amb
+        Lighting.OutdoorAmbient = CFG.orig.outAmb
+        Lighting.Brightness = CFG.orig.bright
+        Lighting.ClockTime = CFG.orig.clock
+    end)
+    print("[DW v7.0] Shadow Elite выгружен. Ошибок: " .. crashCount)
+end
+
+_G.DW_Cleanup = _G.DW_Exit
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [31/32] СТАРТ
+-- ═══════════════════════════════════════════════════════════════════════════
+task.wait(0.5)
+
+SwitchTab("Aim")
+PushNotify("🗡 DW Shadow Elite", "v7.0 загружен · тапни на асасина", "success")
+PlaySuccess()
+
+print("═══════════════════════════════════════════════════════════════")
+print("  DW SHADOW ELITE v7.0 · Mobile Ultimate")
+print("  Вкладок: " .. tostring(#Tabs))
+print("  Mobile: " .. tostring(IS_MOBILE))
+print("  Delta: " .. tostring(IS_DELTA))
+print("  Файлы: settings, button, stats, tracker, backup")
+print("═══════════════════════════════════════════════════════════════")
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- [32/32] СЛУЖЕБНЫЕ ХЕНДЛЕРЫ (пере-инициализация)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- На случай, если меню было скрыто до старта — возвращаем асасина
+FB.Visible = true
+M.Visible = false
